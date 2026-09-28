@@ -211,6 +211,24 @@ export const initialTickets: Ticket[] = [
         comment: 'Militar deslocado para a 1ª Seção do Regimento Deodoro.',
       },
     ],
+    messages: [
+      {
+        id: 'm-1',
+        sender: 'solicitante',
+        senderName: 'Cap Oliveira (Ch 1ª Seç)',
+        content: 'Tem previsão de término? O Boletim Interno precisa subir para conferência do Comandante até as 16h.',
+        createdAt: hoursAgo(0.8),
+        readByTi: true,
+      },
+      {
+        id: 'm-2',
+        sender: 'ti',
+        senderName: '3º Sgt Lucas Rocha (TI)',
+        content: 'Positivo, Capitão! O rolete já foi desobstruído na bancada. Estamos efetuando a página de teste e entregamos em 10 minutos.',
+        createdAt: hoursAgo(0.4),
+        readByTi: true,
+      },
+    ],
   },
   {
     id: 't-1002',
@@ -233,6 +251,16 @@ export const initialTickets: Ticket[] = [
         date: hoursAgo(2),
         author: '1º Ten Albuquerque',
         action: 'Chamado Aberto',
+      },
+    ],
+    messages: [
+      {
+        id: 'm-3',
+        sender: 'solicitante',
+        senderName: '1º Ten Albuquerque (SALC)',
+        content: 'Como está o andamento? O pregão eletrônico da OM abre em breve, tem previsão?',
+        createdAt: hoursAgo(0.2),
+        readByTi: false,
       },
     ],
   },

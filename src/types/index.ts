@@ -10,6 +10,15 @@ export interface TicketHistoryItem {
   comment?: string;
 }
 
+export interface TicketMessage {
+  id: string;
+  sender: 'solicitante' | 'ti';
+  senderName: string;
+  content: string;
+  createdAt: string;
+  readByTi?: boolean;
+}
+
 export interface Ticket {
   id: string;
   code: string; // ex: CH-1001
@@ -29,6 +38,7 @@ export interface Ticket {
   rating?: number; // 1 a 5
   userFeedback?: string;
   history: TicketHistoryItem[];
+  messages?: TicketMessage[];
 }
 
 export interface Department {

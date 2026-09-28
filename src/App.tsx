@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
+import { AdminSidebar } from './components/AdminSidebar';
+import { AdminTopBar } from './components/AdminTopBar';
 import { EmployeePortal } from './components/EmployeePortal';
 import { ITDashboard } from './components/ITDashboard';
 import { NotebookLoans } from './components/NotebookLoans';
@@ -14,7 +16,8 @@ import {
   AccessibilitySettings, 
   Priority, 
   TicketStatus,
-  NotebookLoan
+  NotebookLoan,
+  TicketMessage
 } from './types';
 import { 
   loadTickets, 
@@ -46,6 +49,7 @@ export default function App() {
   const [isAdminRoute, setIsAdminRoute] = useState<boolean>(getIsAdminPath);
   const [adminTab, setAdminTab] = useState<'it' | 'notebooks' | 'technicians'>('it');
   const [isTvModeOpen, setIsTvModeOpen] = useState<boolean>(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   
   // Autenticação da Seção de TI (login: info, senha: R3gD300d0r0!)
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
@@ -222,6 +226,48 @@ export default function App() {
     }));
   };
 
+  // Handler: Excluir chamado
+  const handleDeleteTicket = (ticketId: string) => {
+    setTickets(prev => prev.filter(t => t.id !== ticketId));
+  };
+
+  // Handler: Enviar mensagem no mini-chat do chamado (solicitante ou TI)
+  const handleSendMessage = (ticketId: string, content: string, sender: 'solicitante' | 'ti', senderName: string) => {
+    const newMsg: TicketMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      sender,
+      senderName,
+      content,
+      createdAt: new Date().toISOString(),
+      readByTi: sender === 'ti',
+    };
+
+    setTickets(prev => prev.map(t => {
+      if (t.id === ticketId) {
+        const currentMessages = t.messages || [];
+        return {
+          ...t,
+          messages: [...currentMessages, newMsg],
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return t;
+    }));
+  };
+
+  // Handler: Marcar mensagens do chamado como lidas pela TI
+  const handleMarkMessagesAsRead = (ticketId: string) => {
+    setTickets(prev => prev.map(t => {
+      if (t.id === ticketId && t.messages) {
+        const hasUnread = t.messages.some(m => !m.readByTi);
+        if (!hasUnread) return t;
+        const updated = t.messages.map(m => m.readByTi ? m : { ...m, readByTi: true });
+        return { ...t, messages: updated };
+      }
+      return t;
+    }));
+  };
+
   // Handler: Atribuir militar da TI
   const handleAssignTechnician = (ticketId: string, technicianId: string) => {
     const tech = technicians.find(tc => tc.id === technicianId);
@@ -324,90 +370,205 @@ export default function App() {
 
   const openTicketsCount = tickets.filter(t => t.status !== 'resolvido' && t.status !== 'cancelado').length;
   const activeLoansCount = notebookLoans.filter(l => l.status === 'cautelado').length;
+  const unreadMessagesCount = tickets.reduce((acc, t) => {
+    const unread = t.messages?.filter(m => m.sender === 'solicitante' && !m.readByTi).length || 0;
+    return acc + unread;
+  }, 0);
+  const criticalCount = tickets.filter(t => t.priority === 'critica' && t.status !== 'resolvido' && t.status !== 'cancelado').length;
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors ${fontSizeClass} ${contrastClass} ${
       a11y.highContrast ? 'bg-black text-white' : 'bg-[#f4f6f2] text-slate-900'
     }`}>
       
-      {/* Header Institucional */}
-      <Header
-        isAdminRoute={isAdminRoute}
-        adminTab={adminTab}
-        onSelectAdminTab={setAdminTab}
-        isAdminAuthenticated={isAdminAuthenticated}
-        onLogoutAdmin={handleAdminLogout}
-        onNavigateToClient={navigateToClient}
-        onNavigateToAdmin={navigateToAdmin}
-        onOpenTvMode={() => setIsTvModeOpen(true)}
-        a11y={a11y}
-        onUpdateA11y={setA11y}
-        openTicketsCount={openTicketsCount}
-        activeLoansCount={activeLoansCount}
-      />
-
-      {/* Conteúdo Principal Dividido por Rota (URL) */}
-      <main className="flex-1">
-        
-        {/* ROTA 1: PORTAL DO CLIENTE / SOLICITANTE (URL: /) */}
-        {!isAdminRoute && (
-          <EmployeePortal
-            tickets={tickets}
-            departments={departments}
-            categories={categories}
+      {/* SEÇÃO 1: LAYOUT DASHBOARD COM BARRA LATERAL (ADMIN AUTENTICADO) */}
+      {isAdminRoute && isAdminAuthenticated ? (
+        <div className="min-h-screen flex w-full">
+          {/* Barra Lateral / Sidebar */}
+          <AdminSidebar
+            adminTab={adminTab}
+            onSelectAdminTab={setAdminTab}
+            openTicketsCount={openTicketsCount}
+            activeLoansCount={activeLoansCount}
+            techniciansCount={technicians.length}
+            unreadMessagesCount={unreadMessagesCount}
+            onOpenTvMode={() => setIsTvModeOpen(true)}
+            onLogoutAdmin={handleAdminLogout}
+            onNavigateToClient={navigateToClient}
             a11y={a11y}
-            onCreateTicket={handleCreateTicket}
-            onUpdateTicketRating={handleUpdateTicketRating}
+            onUpdateA11y={setA11y}
+            isMobileOpen={isMobileSidebarOpen}
+            onCloseMobile={() => setIsMobileSidebarOpen(false)}
           />
-        )}
 
-        {/* ROTA 2: ÁREA ADMINISTRATIVA DA TI (URL: /admin) */}
-        {isAdminRoute && !isAdminAuthenticated && (
-          <AdminLogin
-            onLoginSuccess={handleAdminLoginSuccess}
-            onGoBackToPortal={navigateToClient}
+          {/* Área Principal Direita do Dashboard */}
+          <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-[#f4f6f2]">
+            <AdminTopBar
+              adminTab={adminTab}
+              onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
+              unreadMessagesCount={unreadMessagesCount}
+              onOpenTvMode={() => setIsTvModeOpen(true)}
+              onLogoutAdmin={handleAdminLogout}
+              criticalCount={criticalCount}
+            />
+
+            <main className="flex-1">
+              {adminTab === 'it' && (
+                <ITDashboard
+                  tickets={tickets}
+                  departments={departments}
+                  technicians={technicians}
+                  a11y={a11y}
+                  onUpdateTicketStatus={handleUpdateTicketStatus}
+                  onUpdateTicketPriority={handleUpdateTicketPriority}
+                  onAssignTechnician={handleAssignTechnician}
+                  onAddTicketHistory={handleAddTicketHistory}
+                  onDeleteTicket={handleDeleteTicket}
+                  onOpenTvMode={() => setIsTvModeOpen(true)}
+                  onSendMessage={handleSendMessage}
+                  onMarkMessagesAsRead={handleMarkMessagesAsRead}
+                />
+              )}
+
+              {adminTab === 'notebooks' && (
+                <NotebookLoans
+                  loans={notebookLoans}
+                  departments={departments}
+                  a11y={a11y}
+                  adminPassword="admin"
+                  onAddLoan={handleAddNotebookLoan}
+                  onReturnLoan={handleReturnNotebookLoan}
+                />
+              )}
+
+              {adminTab === 'technicians' && (
+                <TechniciansManager
+                  technicians={technicians}
+                  a11y={a11y}
+                  onUpdateTechnicians={setTechnicians}
+                />
+              )}
+            </main>
+
+            {/* Rodapé Oficial do Dashboard */}
+            <footer className={`border-t py-4 px-6 text-xs transition-colors ${
+              a11y.highContrast 
+                ? 'bg-black border-yellow-400 text-yellow-400' 
+                : 'bg-[#192b14] border-[#cba135]/30 text-emerald-100/70'
+            }`}>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-[#dfb642]">
+                    2º GAC L - REGIMENTO DEODORO
+                  </span>
+                  <span>·</span>
+                  <span>Seção de Informática & Telemática</span>
+                  <span>·</span>
+                  <span className="font-mono text-emerald-300">BRAÇO FORTE, MÃO AMIGA</span>
+                </div>
+                <button
+                  onClick={navigateToClient}
+                  className="hover:text-white flex items-center gap-1 font-mono text-[11px] text-emerald-200/80 hover:text-[#dfb642] transition-colors"
+                >
+                  <span>Portal do Solicitante →</span>
+                </button>
+              </div>
+            </footer>
+          </div>
+        </div>
+      ) : (
+        /* SEÇÃO 2: LAYOUT INSTITUCIONAL PADRÃO (PORTAL DO SOLICITANTE OU LOGIN TI) */
+        <div className="flex-1 flex flex-col">
+          <Header
+            isAdminRoute={isAdminRoute}
+            adminTab={adminTab}
+            onSelectAdminTab={setAdminTab}
+            isAdminAuthenticated={isAdminAuthenticated}
+            onLogoutAdmin={handleAdminLogout}
+            onNavigateToClient={navigateToClient}
+            onNavigateToAdmin={navigateToAdmin}
+            onOpenTvMode={() => setIsTvModeOpen(true)}
             a11y={a11y}
+            onUpdateA11y={setA11y}
+            openTicketsCount={openTicketsCount}
+            activeLoansCount={activeLoansCount}
           />
-        )}
 
-        {isAdminRoute && isAdminAuthenticated && (
-          <div>
-            {adminTab === 'it' && (
-              <ITDashboard
+          <main className="flex-1">
+            {/* PORTAL DO SOLICITANTE COM CONSULTA E MINI-CHAT */}
+            {!isAdminRoute && (
+              <EmployeePortal
                 tickets={tickets}
                 departments={departments}
-                technicians={technicians}
+                categories={categories}
                 a11y={a11y}
-                onUpdateTicketStatus={handleUpdateTicketStatus}
-                onUpdateTicketPriority={handleUpdateTicketPriority}
-                onAssignTechnician={handleAssignTechnician}
-                onAddTicketHistory={handleAddTicketHistory}
-                onOpenTvMode={() => setIsTvModeOpen(true)}
+                onCreateTicket={handleCreateTicket}
+                onUpdateTicketRating={handleUpdateTicketRating}
+                onSendMessage={handleSendMessage}
               />
             )}
 
-            {adminTab === 'notebooks' && (
-              <NotebookLoans
-                loans={notebookLoans}
-                departments={departments}
+            {/* TELA DE LOGIN PARA A ADMINISTRAÇÃO DA TI */}
+            {isAdminRoute && !isAdminAuthenticated && (
+              <AdminLogin
+                onLoginSuccess={handleAdminLoginSuccess}
+                onGoBackToPortal={navigateToClient}
                 a11y={a11y}
-                adminPassword="admin"
-                onAddLoan={handleAddNotebookLoan}
-                onReturnLoan={handleReturnNotebookLoan}
               />
             )}
+          </main>
 
-            {adminTab === 'technicians' && (
-              <TechniciansManager
-                technicians={technicians}
-                a11y={a11y}
-                onUpdateTechnicians={setTechnicians}
-              />
-            )}
-          </div>
-        )}
+          {/* Rodapé Militar Oficial */}
+          <footer className={`border-t py-4 px-4 sm:px-8 text-xs transition-colors ${
+            a11y.highContrast 
+              ? 'bg-black border-yellow-400 text-yellow-400' 
+              : 'bg-[#192b14] border-[#cba135]/30 text-emerald-100/70'
+          }`}>
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[#dfb642]">
+                  2º GAC L - REGIMENTO DEODORO
+                </span>
+                <span>·</span>
+                <span>Seção de Informática & Telemática</span>
+                <span>·</span>
+                <span className="font-mono text-emerald-300">BRAÇO FORTE, MÃO AMIGA</span>
+              </div>
 
-      </main>
+              <div className="flex items-center gap-4">
+                {!isAdminRoute ? (
+                  <button
+                    onClick={navigateToAdmin}
+                    className="hover:text-white flex items-center gap-1 font-mono text-[11px] text-emerald-200/60 hover:text-[#dfb642] transition-colors"
+                    title="Acesso exclusivo da Seção de TI via URL /admin"
+                  >
+                    <Lock className="w-3 h-3" />
+                    <span>Acesso TI (/admin)</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={navigateToClient}
+                    className="hover:text-white font-mono text-[11px] text-[#dfb642] hover:underline"
+                  >
+                    ← Voltar para Central do Solicitante
+                  </button>
+                )}
+
+                <span>·</span>
+
+                <button
+                  onClick={() => {
+                    setA11y(prev => ({ ...prev, highContrast: !prev.highContrast }));
+                  }}
+                  className="hover:underline font-semibold"
+                >
+                  {a11y.highContrast ? 'Desativar Alto Contraste' : 'Alto Contraste'}
+                </button>
+              </div>
+            </div>
+          </footer>
+        </div>
+      )}
 
       {/* Painel Modo TV em Tela Ampla para a Sala de TI */}
       {isTvModeOpen && (
@@ -418,59 +579,6 @@ export default function App() {
           onClose={() => setIsTvModeOpen(false)}
         />
       )}
-
-      {/* Rodapé Militar Oficial */}
-      <footer className={`border-t py-4 px-4 sm:px-8 text-xs transition-colors ${
-        a11y.highContrast 
-          ? 'bg-black border-yellow-400 text-yellow-400' 
-          : 'bg-[#192b14] border-[#cba135]/30 text-emerald-100/70'
-      }`}>
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-[#dfb642]">
-              2º GAC L - REGIMENTO DEODORO
-            </span>
-            <span>·</span>
-            <span>Seção de Informática & Telemática</span>
-            <span>·</span>
-            <span className="font-mono text-emerald-300">BRAÇO FORTE, MÃO AMIGA</span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Acesso direto por URL para a Administração da TI */}
-            {!isAdminRoute ? (
-              <button
-                onClick={navigateToAdmin}
-                className="hover:text-white flex items-center gap-1 font-mono text-[11px] text-emerald-200/60 hover:text-[#dfb642] transition-colors"
-                title="Acesso exclusivo da Seção de TI via URL /admin"
-              >
-                <Lock className="w-3 h-3" />
-                <span>Acesso TI (/admin)</span>
-              </button>
-            ) : (
-              <button
-                onClick={navigateToClient}
-                className="hover:text-white font-mono text-[11px] text-[#dfb642] hover:underline"
-              >
-                ← Voltar para Central do Solicitante
-              </button>
-            )}
-
-            <span>·</span>
-
-            <button
-              onClick={() => {
-                setA11y(prev => ({ ...prev, highContrast: !prev.highContrast }));
-              }}
-              className="hover:underline font-semibold"
-            >
-              {a11y.highContrast ? 'Desativar Alto Contraste' : 'Alto Contraste'}
-            </button>
-          </div>
-
-        </div>
-      </footer>
 
     </div>
   );

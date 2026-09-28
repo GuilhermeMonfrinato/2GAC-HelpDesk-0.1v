@@ -17,8 +17,10 @@ import {
   AlertTriangle,
   Printer as PrintIcon,
   Shield,
-  Layers,
-  ArrowRight
+  Layers, 
+  ArrowRight,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 import { Ticket, Department, Category, AccessibilitySettings, Priority } from '../types';
 
@@ -36,6 +38,7 @@ interface EmployeePortalProps {
     priority: Priority;
   }) => Ticket;
   onUpdateTicketRating: (ticketId: string, rating: number, comment?: string) => void;
+  onSendMessage: (ticketId: string, content: string, sender: 'solicitante' | 'ti', senderName: string) => void;
 }
 
 export const EmployeePortal: React.FC<EmployeePortalProps> = ({
@@ -45,6 +48,7 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
   a11y,
   onCreateTicket,
   onUpdateTicketRating,
+  onSendMessage,
 }) => {
   const [activeView, setActiveView] = useState<'create' | 'track'>('create');
   
@@ -60,6 +64,7 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
   const [searchCodeInput, setSearchCodeInput] = useState('');
   const [searchedCode, setSearchedCode] = useState('');
   const [submittedTicket, setSubmittedTicket] = useState<Ticket | null>(null);
+  const [clientChatInput, setClientChatInput] = useState('');
 
   // Category Icon helper
   const renderCategoryIcon = (iconName: string, className = "w-6 h-6") => {
@@ -790,6 +795,115 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
                           {isResolved ? '✓' : '○'} 3. Concluído
                         </div>
                       </div>
+                    </div>
+
+                    {/* CANAL DIRETO COM A SEÇÃO DE TI (MINI-CHAT / NOTIFICAÇÃO) */}
+                    <div className="mt-5 p-5 sm:p-6 rounded-2xl bg-white border-2 border-[#27431e]/30 shadow-xs space-y-4 text-left">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-[#1e3316] text-[#dfb642] flex items-center justify-center shadow-xs">
+                            <MessageSquare className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black text-slate-900 leading-tight">
+                              Canal Direto com a Seção de Informática
+                            </h4>
+                            <span className="text-[11px] text-slate-500">
+                              Tire dúvidas sobre previsão, andamento ou informe urgências diretamente aos mecânicos de TI
+                            </span>
+                          </div>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800">
+                          ● Canal Aberto
+                        </span>
+                      </div>
+
+                      {/* Histórico de Mensagens / Mini-Chat */}
+                      <div className="space-y-2.5 max-h-60 overflow-y-auto p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                        {(!t.messages || t.messages.length === 0) ? (
+                          <div className="text-center py-4 text-xs text-slate-400 font-medium">
+                            Nenhuma dúvida enviada ainda. Clique em uma das perguntas rápidas abaixo ou digite sua mensagem.
+                          </div>
+                        ) : (
+                          t.messages.map((msg) => (
+                            <div 
+                              key={msg.id}
+                              className={`flex flex-col ${msg.sender === 'solicitante' ? 'items-end' : 'items-start'}`}
+                            >
+                              <div className={`max-w-[85%] sm:max-w-[75%] p-3.5 rounded-2xl text-xs ${
+                                msg.sender === 'solicitante'
+                                  ? 'bg-[#1e3316] text-[#dfb642] rounded-br-xs shadow-xs'
+                                  : 'bg-white border-2 border-[#cba135] text-slate-900 rounded-bl-xs shadow-sm'
+                              }`}>
+                                <div className="flex items-center justify-between gap-3 mb-1 text-[10px] opacity-80 font-mono">
+                                  <span className="font-bold">
+                                    {msg.sender === 'solicitante' ? 'Você (Militar Solicitante)' : `Militar da TI: ${msg.senderName}`}
+                                  </span>
+                                  <span>
+                                    {new Date(msg.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                                <p className="leading-relaxed font-medium whitespace-pre-wrap">
+                                  {msg.content}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Botões de Perguntas Rápidas */}
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-600 mb-1.5 block">
+                          Perguntas Frequentes (Clique para enviar automaticamente):
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            'Como está o andamento do atendimento?',
+                            'Tem previsão de término / conclusão?',
+                            'Preciso com urgência para o Boletim Interno / Expediente.',
+                            'O militar da TI já está a caminho da seção?'
+                          ].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => {
+                                onSendMessage(t.id, preset, 'solicitante', t.requesterName);
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 text-xs font-semibold transition-all flex items-center gap-1.5 active:scale-95 text-left"
+                            >
+                              <span>💬</span>
+                              <span>{preset}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Formulário de Envio de Mensagem */}
+                      <form 
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (!clientChatInput.trim()) return;
+                          onSendMessage(t.id, clientChatInput.trim(), 'solicitante', t.requesterName);
+                          setClientChatInput('');
+                        }}
+                        className="flex gap-2 pt-1"
+                      >
+                        <input
+                          type="text"
+                          placeholder="Digite sua dúvida ou mensagem para a Seção de TI..."
+                          value={clientChatInput}
+                          onChange={(e) => setClientChatInput(e.target.value)}
+                          className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs bg-slate-50 focus:bg-white text-slate-900 focus:ring-2 focus:ring-[#27431e]"
+                        />
+                        <button
+                          type="submit"
+                          className="px-4 py-2.5 rounded-xl bg-[#1e3316] text-[#dfb642] font-black text-xs flex items-center gap-1.5 hover:bg-[#27431e] transition-colors border border-[#cba135] shadow-xs shrink-0"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Enviar</span>
+                        </button>
+                      </form>
                     </div>
 
                     {/* Avaliação */}
