@@ -6,6 +6,7 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    base: "/2GAC-HelpDesk-0.1v/",
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
