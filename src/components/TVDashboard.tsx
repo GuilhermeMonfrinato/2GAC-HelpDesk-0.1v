@@ -77,7 +77,7 @@ export const TVDashboard: React.FC<TVDashboardProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded text-xs font-mono font-black uppercase tracking-widest bg-[#dfb642] text-[#192b14]">
-                2º GAC L - REGIMENTO DEODORO
+                2º GAC - REGIMENTO DEODORO
               </span>
               <span className="text-xs text-emerald-300 font-mono tracking-wider">
                 ITU - SP · ARTILHARIA

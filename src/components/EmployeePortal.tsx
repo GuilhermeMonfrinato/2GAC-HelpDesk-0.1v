@@ -141,7 +141,7 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-black uppercase tracking-widest bg-[#dfb642] text-[#192b14]">
-                2º GAC L - REGIMENTO DEODORO
+                2º GAC - REGIMENTO DEODORO
               </span>
               <span className="text-xs text-emerald-200/80 font-mono">
                 Seção de Informática & Telemática

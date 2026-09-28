@@ -81,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className={`text-base sm:text-lg font-black tracking-tight block leading-tight ${
                   a11y.highContrast ? 'text-yellow-400' : 'text-[#dfb642]'
                 }`}>
-                  2º GAC L - REGIMENTO DEODORO
+                  2º GAC - REGIMENTO DEODORO
                 </span>
               </div>
               <span className="text-[11px] text-emerald-200/80 font-mono tracking-tight block">
@@ -159,7 +159,7 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
         ) : (
           <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-emerald-100/90 font-mono">
-            <span>2º GAC L</span>
+            <span>2º GAC</span>
             <span>·</span>
             <span>REGIMENTO DEODORO</span>
             <span>·</span>

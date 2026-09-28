@@ -94,7 +94,7 @@ export const TechniciansManager: React.FC<TechniciansManagerProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-[#1e3316] text-[#dfb642] uppercase">
-              2º GAC L - REGIMENTO DEODORO
+              2º GAC - REGIMENTO DEODORO
             </span>
             <span className="text-xs text-slate-500 font-mono">
               Efetivo da Seção de Informática & Telemática
@@ -198,7 +198,7 @@ export const TechniciansManager: React.FC<TechniciansManagerProps> = ({
                   <h3 className="text-xl font-black text-slate-900">
                     Cadastrar Militar na Seção de TI
                   </h3>
-                  <span className="text-xs text-slate-500 font-mono">2º GAC L - Regimento Deodoro</span>
+                  <span className="text-xs text-slate-500 font-mono">2º GAC - Regimento Deodoro</span>
                 </div>
               </div>
 

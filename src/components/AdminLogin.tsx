@@ -49,7 +49,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
           </div>
 
           <div className="font-mono text-xs font-black tracking-widest text-[#2d4a22] uppercase">
-            2º GAC L - REGIMENTO DEODORO
+            2º GAC - REGIMENTO DEODORO
           </div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
             Seção de Informática

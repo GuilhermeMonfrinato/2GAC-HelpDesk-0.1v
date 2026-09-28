@@ -193,7 +193,7 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-[#1e3316] text-[#dfb642] uppercase">
-              2º GAC L - REGIMENTO DEODORO · CTI
+              2º GAC - REGIMENTO DEODORO · CTI
             </span>
             <span className="text-xs text-slate-500 font-mono flex items-center gap-1">
               <Lock className="w-3.5 h-3.5 text-slate-400" />

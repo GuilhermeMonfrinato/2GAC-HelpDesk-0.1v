@@ -1,6 +1,6 @@
 {
-  "name": "2º GAC L - Regimento Deodoro | Seção de Informática",
-  "description": "Sistema de gestão de chamados e cautelas de notebooks para o 2º Grupo de Artilharia de Campanha Leve - Regimento Deodoro.",
+  "name": "2º GAC - Regimento Deodoro | Seção de Informática",
+  "description": "Sistema de gestão de chamados e cautelas de notebooks para o 2º Grupo de Artilharia de Campanha - Regimento Deodoro.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
