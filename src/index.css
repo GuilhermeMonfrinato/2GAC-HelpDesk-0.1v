@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --eb-green-dark: #192a14;
+    --eb-green: #27431e;
+    --eb-green-light: #385e2b;
+    --eb-gold: #cba135;
+    --eb-gold-light: #e5b946;
+  }
+}
+
+/* Acessibilidade: Tamanhos de fonte controlados via classe */
+.font-size-large {
+  font-size: 115% !important;
+}
+
+.font-size-extralarge {
+  font-size: 130% !important;
+}
+
+.font-size-extralarge h1 {
+  font-size: 2.25rem !important;
+}
+.font-size-extralarge h2 {
+  font-size: 1.85rem !important;
+}
+.font-size-extralarge button,
+.font-size-extralarge input,
+.font-size-extralarge select,
+.font-size-extralarge textarea {
+  font-size: 1.15rem !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+/* Modo Alto Contraste */
+.high-contrast {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+.high-contrast .bg-white,
+.high-contrast .bg-slate-50,
+.high-contrast .bg-\[\#f4f6f2\],
+.high-contrast .bg-emerald-50 {
+  background-color: #0b0f19 !important;
+  color: #ffffff !important;
+  border-color: #facc15 !important;
+}
+
+.high-contrast .text-slate-500,
+.high-contrast .text-slate-600,
+.high-contrast .text-slate-700 {
+  color: #f1f5f9 !important;
+}
+
+.high-contrast .border-slate-200,
+.high-contrast .border-slate-300 {
+  border-color: #facc15 !important;
+  border-width: 2px !important;
+}
+
+.high-contrast input,
+.high-contrast select,
+.high-contrast textarea {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #facc15 !important;
+}
+
+.high-contrast button {
+  border: 2px solid #facc15 !important;
+}
+
+/* Foco visível nítido */
+*:focus-visible {
+  outline: 3px solid #385e2b !important;
+  outline-offset: 2px !important;
+}
+
+.high-contrast *:focus-visible {
+  outline: 4px solid #facc15 !important;
+  outline-offset: 2px !important;
+}
