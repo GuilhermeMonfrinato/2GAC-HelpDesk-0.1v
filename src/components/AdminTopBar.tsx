@@ -8,9 +8,12 @@ import {
   Laptop, 
   Users,
   Clock,
-  ShieldAlert
+  ShieldAlert,
+  Shield,
+  UserCheck
 } from 'lucide-react';
-import { AccessibilitySettings } from '../types';
+import { AccessibilitySettings, MilitaryUser } from '../types';
+import { RegimentoDeodoroLogo } from './RegimentoDeodoroLogo';
 
 interface AdminTopBarProps {
   adminTab: 'it' | 'notebooks' | 'technicians';
@@ -20,6 +23,7 @@ interface AdminTopBarProps {
   onLogoutAdmin: () => void;
   criticalCount: number;
   onFilterCritical?: () => void;
+  currentUser?: MilitaryUser | null;
 }
 
 export const AdminTopBar: React.FC<AdminTopBarProps> = ({
@@ -30,6 +34,7 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
   onLogoutAdmin,
   criticalCount,
   onFilterCritical,
+  currentUser,
 }) => {
   const [timeStr, setTimeStr] = useState<string>('');
 
@@ -59,8 +64,8 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
         };
       case 'technicians':
         return {
-          title: 'Militares da Seção de TI',
-          subtitle: 'Cadastro de chefes, auxiliares e mecânicos operacionais',
+          title: 'Gestão de Militares & Auditoria',
+          subtitle: 'Cadastro de login/senha individual e logs detalhados',
           icon: <Users className="w-5 h-5 text-[#27431e]" />
         };
     }
@@ -68,8 +73,23 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
 
   const { title, subtitle, icon } = getTabTitle();
 
+  const getRoleBadge = (role?: string) => {
+    switch (role) {
+      case 'CH-SECINFO':
+        return 'bg-amber-100 text-amber-900 border-amber-300';
+      case 'CH-XERIFEINFO':
+        return 'bg-blue-100 text-blue-900 border-blue-300';
+      case 'CH-TECNICOINFO':
+        return 'bg-emerald-100 text-emerald-900 border-emerald-300';
+      case 'CH-TVINFO':
+        return 'bg-purple-100 text-purple-900 border-purple-300';
+      default:
+        return 'bg-slate-100 text-slate-800 border-slate-300';
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4 shadow-xs">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-3 flex items-center justify-between gap-4 shadow-xs">
       
       {/* Lado Esquerdo: Botão Mobile & Título */}
       <div className="flex items-center gap-3">
@@ -82,13 +102,13 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
         </button>
 
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex p-2.5 rounded-xl bg-slate-100 border border-slate-200">
-            {icon}
+          <div className="hidden sm:flex p-1.5 rounded-xl bg-slate-100 border border-slate-200">
+            <RegimentoDeodoroLogo size={32} />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono font-black uppercase tracking-wider text-[#27431e] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                2º GAC L · REGIMENTO DEODORO
+                2º GAC · REGIMENTO DEODORO
               </span>
             </div>
             <h1 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
@@ -98,14 +118,34 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
         </div>
       </div>
 
-      {/* Lado Direito: Notificações & Atalhos */}
+      {/* Lado Direito: Perfil do Militar, Notificações & Atalhos */}
       <div className="flex items-center gap-3">
         
+        {/* Identificação do Militar Conectado */}
+        {currentUser && (
+          <div className="hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+            <div className="w-7 h-7 rounded-xl bg-[#1e3316] text-[#dfb642] font-black text-[11px] flex items-center justify-center border border-[#cba135]/40 shrink-0">
+              {currentUser.warName.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="text-left">
+              <span className="font-bold text-slate-900 block leading-tight text-xs">
+                {currentUser.name}
+              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`px-1.5 py-0.2 rounded font-mono font-black text-[9px] border ${getRoleBadge(currentUser.role)}`}>
+                  {currentUser.role}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">@{currentUser.username}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Alerta de Perguntas do Solicitante no Chat */}
         {unreadMessagesCount > 0 && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold animate-pulse">
             <MessageSquare className="w-4 h-4 text-amber-600" />
-            <span className="hidden sm:inline">Dúvidas de Solicitantes:</span>
+            <span className="hidden sm:inline">Dúvidas:</span>
             <span className="px-1.5 py-0.5 rounded-md bg-amber-600 text-white font-mono text-[11px]">
               {unreadMessagesCount}
             </span>
@@ -113,7 +153,7 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
         )}
 
         {/* Relógio Digital */}
-        <div className="hidden md:flex items-center gap-1.5 text-xs font-mono font-bold text-slate-600 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200">
+        <div className="hidden lg:flex items-center gap-1.5 text-xs font-mono font-bold text-slate-600 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200">
           <Clock className="w-3.5 h-3.5 text-[#27431e]" />
           <span>{timeStr}</span>
         </div>
@@ -141,3 +181,4 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
     </header>
   );
 };
+

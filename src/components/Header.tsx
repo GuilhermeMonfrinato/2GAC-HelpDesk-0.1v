@@ -11,6 +11,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { AccessibilitySettings } from '../types';
+import { RegimentoDeodoroLogo } from './RegimentoDeodoroLogo';
 
 interface HeaderProps {
   isAdminRoute: boolean;
@@ -69,13 +70,10 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Zona 1: Emblema & Identidade Militar */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg shadow-sm border ${
-              a11y.highContrast 
-                ? 'bg-yellow-400 text-black border-white' 
-                : 'bg-[#27431e] text-[#dfb642] border-[#cba135]/60'
-            }`}>
-              <Shield className="w-6 h-6" />
-            </div>
+            <RegimentoDeodoroLogo 
+              size={40} 
+              highContrast={a11y.highContrast} 
+            />
             <div>
               <div className="flex items-center gap-1.5">
                 <span className={`text-base sm:text-lg font-black tracking-tight block leading-tight ${

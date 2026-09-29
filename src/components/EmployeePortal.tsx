@@ -124,7 +124,7 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
     setSearchedCode(searchCodeInput.trim());
   };
 
-  // Encontra chamado pelo código (suporta "1001", "CH-1001", "#CH-1001")
+  // Encontra chamado pelo código (suporta "1001", "TICKET-1001", "#TICKET-1001", "CH-1001")
   const foundTicket = searchedCode.trim() 
     ? tickets.find(t => {
         const cleanInput = searchedCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -636,7 +636,7 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
               Consultar Andamento do Chamado
             </h2>
             <p className="text-sm text-slate-600 mb-6">
-              Para preservar o sigilo das seções, informe o <strong>código do seu chamado</strong> presente no comprovante de abertura (ex: <code className="font-mono bg-slate-100 px-2 py-0.5 rounded font-bold text-[#1e3316]">CH-1001</code>).
+              Para preservar o sigilo das seções, informe o <strong>código do seu chamado</strong> presente no comprovante de abertura (ex: <code className="font-mono bg-slate-100 px-2 py-0.5 rounded font-bold text-[#1e3316]">TICKET-1001</code>).
             </p>
 
             <form onSubmit={handleSearchByCode} className="flex flex-col sm:flex-row gap-3">
@@ -645,7 +645,7 @@ export const EmployeePortal: React.FC<EmployeePortalProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="Digite o código do chamado (ex: CH-1001 ou 1001)..."
+                  placeholder="Digite o código do chamado (ex: TICKET-1001 ou 1001)..."
                   value={searchCodeInput}
                   onChange={(e) => setSearchCodeInput(e.target.value)}
                   className={`w-full pl-13 pr-4 py-4 rounded-2xl border text-lg font-mono font-bold uppercase focus:ring-2 focus:ring-[#27431e] ${

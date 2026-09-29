@@ -1,4 +1,4 @@
-import { Department, Technician, Category, Ticket, NotebookLoan } from '../types';
+import { Department, Technician, Category, Ticket, NotebookLoan, MilitaryUser, SystemAuditLog } from '../types';
 
 export const initialDepartments: Department[] = [
   {
@@ -62,7 +62,7 @@ export const initialDepartments: Department[] = [
     color: '#713f12',
     iconName: 'DollarSign',
     managerName: 'Cap Vasconcelos',
-    description: 'Execução orçamentária e pagamento do efetivo do 2º GAC L.',
+    description: 'Execução orçamentária e pagamento do efetivo do 2º GAC.',
   },
   {
     id: 'dept-bia',
@@ -182,7 +182,7 @@ const daysAgo = (d: number, h: number = 2) => new Date(now.getTime() - (d * 24 +
 export const initialTickets: Ticket[] = [
   {
     id: 't-1001',
-    code: 'CH-1001',
+    code: 'TICKET-1001',
     title: 'Impressora da 1ª Seção travando durante confecção do Boletim Interno',
     description: 'A impressora laser da SPes travou no meio da impressão das alterações do efetivo. Necessário reparo urgente para publicação do BI.',
     category: 'Impressora / Impressão de Boletim',
@@ -232,7 +232,7 @@ export const initialTickets: Ticket[] = [
   },
   {
     id: 't-1002',
-    code: 'CH-1002',
+    code: 'TICKET-1002',
     title: 'Ponto de rede inoperante na SALC do Regimento',
     description: 'Computador responsável pelos pregões da unidade está sem sinal de conexão desde a primeira hora do expediente.',
     category: 'Conexão de Rede / Internet do Quartel',
@@ -266,7 +266,7 @@ export const initialTickets: Ticket[] = [
   },
   {
     id: 't-1003',
-    code: 'CH-1003',
+    code: 'TICKET-1003',
     title: 'Senha do computador expirada na 4ª Seção (SLog)',
     description: 'Após retorno de exercício no terreno a senha da máquina bloqueou e não permite login.',
     category: 'Esqueci a Senha / Usuário Bloqueado',
@@ -299,7 +299,7 @@ export const initialTickets: Ticket[] = [
   },
   {
     id: 't-1004',
-    code: 'CH-1004',
+    code: 'TICKET-1004',
     title: 'Instalação de leitora de cartão para token no Subcomando',
     description: 'Necessário instalar driver homologado da leitora de cartão no gabinete do Subcomandante do Regimento.',
     category: 'Sistemas Militares (SISBOL / Comprasnet / SIGELOG)',
@@ -338,6 +338,61 @@ const pastDays = (d: number) => {
   return formatDate(target);
 };
 
+export const initialMilitaryUsers: MilitaryUser[] = [
+  {
+    id: 'usr-1',
+    username: 'secinfo',
+    password: '123',
+    name: '1º Ten Carlos Mendes',
+    rank: '1º Ten',
+    warName: 'Carlos Mendes',
+    role: 'CH-SECINFO',
+    active: true,
+    email: 'carlos.mendes@eb.mil.br',
+    specialty: 'Chefe da Seção de Informática & Telemática (Acesso Total)',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'usr-2',
+    username: 'xerife',
+    password: '123',
+    name: '2º Sgt Beatriz Silveira',
+    rank: '2º Sgt',
+    warName: 'Beatriz Silveira',
+    role: 'CH-XERIFEINFO',
+    active: true,
+    email: 'beatriz.silveira@eb.mil.br',
+    specialty: 'Xerife do Corpo Técnico (Gerência de Fila e Técnicos)',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'usr-3',
+    username: 'tecnico',
+    password: '123',
+    name: '3º Sgt Lucas Rocha',
+    rank: '3º Sgt',
+    warName: 'Lucas Rocha',
+    role: 'CH-TECNICOINFO',
+    active: true,
+    email: 'lucas.rocha@eb.mil.br',
+    specialty: 'Mecânico de TI / Atendimento e Solução',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'usr-4',
+    username: 'tvinfo',
+    password: '123',
+    name: 'Painel TV da Seção',
+    rank: 'TI',
+    warName: 'Telão Sala TI',
+    role: 'CH-TVINFO',
+    active: true,
+    email: 'tv.informatica@eb.mil.br',
+    specialty: 'Exibição de Status e Chamados (Sem Interação)',
+    createdAt: new Date().toISOString(),
+  },
+];
+
 export const initialNotebookLoans: NotebookLoan[] = [
   {
     id: 'loan-01',
@@ -347,8 +402,28 @@ export const initialNotebookLoans: NotebookLoan[] = [
     departmentId: 'dept-s3',
     loanDate: pastDays(4),
     expectedReturnDate: inDays(3),
+    originalExpectedReturnDate: inDays(3),
+    extensionCount: 0,
     status: 'cautelado',
     authorizedBy: '1º Ten Carlos Mendes (Ch Seç Info)',
+    history: [
+      {
+        id: 'lh-1',
+        date: pastDays(4),
+        author: '1º Ten Carlos Mendes',
+        action: 'criacao',
+        summary: 'Cautela autorizada para o Maj Nogueira (3ª Seção) para apoio à instrução de Artilharia.',
+      },
+    ],
+    messages: [
+      {
+        id: 'lm-1',
+        sender: 'ti',
+        senderName: '1º Ten Carlos Mendes',
+        content: 'Notebook entregue com fonte original e cabo de rede militar.',
+        createdAt: pastDays(4),
+      },
+    ],
   },
   {
     id: 'loan-02',
@@ -358,8 +433,28 @@ export const initialNotebookLoans: NotebookLoan[] = [
     departmentId: 'dept-salc',
     loanDate: pastDays(6),
     expectedReturnDate: inDays(1),
+    originalExpectedReturnDate: inDays(1),
+    extensionCount: 0,
     status: 'cautelado',
     authorizedBy: '2º Sgt Beatriz Silveira (Aux Seç Info)',
+    history: [
+      {
+        id: 'lh-2',
+        date: pastDays(6),
+        author: '2º Sgt Beatriz Silveira',
+        action: 'criacao',
+        summary: 'Cautela autorizada para apoio a pregões eletrônicos da SALC.',
+      },
+    ],
+    messages: [
+      {
+        id: 'lm-2',
+        sender: 'ti',
+        senderName: '2º Sgt Beatriz Silveira',
+        content: 'Configurado certificado digital de compras públicas.',
+        createdAt: pastDays(6),
+      },
+    ],
   },
   {
     id: 'loan-03',
@@ -369,8 +464,35 @@ export const initialNotebookLoans: NotebookLoan[] = [
     departmentId: 'dept-s4',
     loanDate: pastDays(12),
     expectedReturnDate: pastDays(2),
+    originalExpectedReturnDate: pastDays(2),
+    extensionCount: 0,
     status: 'cautelado',
     authorizedBy: '1º Ten Carlos Mendes (Ch Seç Info)',
+    history: [
+      {
+        id: 'lh-3',
+        date: pastDays(12),
+        author: '1º Ten Carlos Mendes',
+        action: 'criacao',
+        summary: 'Cautela autorizada para inventário semestral de munição da 4ª Seção.',
+      },
+      {
+        id: 'lh-4',
+        date: pastDays(2),
+        author: 'Sistema TI',
+        action: 'inspecao',
+        summary: 'Data limite atingida sem devolução registrada. Equipamento em atraso.',
+      },
+    ],
+    messages: [
+      {
+        id: 'lm-3',
+        sender: 'ti',
+        senderName: 'Seção de TI',
+        content: 'Prazo limite expirou em 2 dias atrás. Gentileza comparecer à Seção de TI ou solicitar prorrogação com justificativa.',
+        createdAt: pastDays(1),
+      },
+    ],
   },
   {
     id: 'loan-04',
@@ -387,6 +509,22 @@ export const initialNotebookLoans: NotebookLoan[] = [
     returnNotes: 'LED indicador de carga inoperante e cabo da fonte danificado. Encaminhado para substituição.',
     authorizedBy: '1º Ten Carlos Mendes (Ch Seç Info)',
     returnedAuthorizedBy: '2º Sgt Beatriz Silveira (Aux Seç Info)',
+    history: [
+      {
+        id: 'lh-5',
+        date: pastDays(18),
+        author: '1º Ten Carlos Mendes',
+        action: 'criacao',
+        summary: 'Cautela autorizada para a Fiscalização Administrativa.',
+      },
+      {
+        id: 'lh-6',
+        date: pastDays(8),
+        author: '2º Sgt Beatriz Silveira',
+        action: 'devolucao',
+        summary: 'Descautela realizada com apontamento de avarias na fonte e LED.',
+      },
+    ],
   },
   {
     id: 'loan-05',
@@ -402,5 +540,44 @@ export const initialNotebookLoans: NotebookLoan[] = [
     returnNotes: 'Equipamento conferido e recebido em perfeitas condições no quartel.',
     authorizedBy: '2º Sgt Beatriz Silveira (Aux Seç Info)',
     returnedAuthorizedBy: '1º Ten Carlos Mendes (Ch Seç Info)',
+    history: [
+      {
+        id: 'lh-7',
+        date: pastDays(22),
+        author: '2º Sgt Beatriz Silveira',
+        action: 'criacao',
+        summary: 'Cautela autorizada para conferência de fichas disciplinares na 1ª Seção.',
+      },
+      {
+        id: 'lh-8',
+        date: pastDays(14),
+        author: '1º Ten Carlos Mendes',
+        action: 'devolucao',
+        summary: 'Equipamento devolvido íntegro e em perfeito funcionamento.',
+      },
+    ],
   },
 ];
+
+export const initialAuditLogs: SystemAuditLog[] = [
+  {
+    id: 'log-1',
+    timestamp: pastDays(2),
+    militaryName: '1º Ten Carlos Mendes',
+    militaryLogin: 'secinfo',
+    role: 'CH-SECINFO',
+    actionType: 'LOGIN_SUCESSO',
+    summary: 'Autenticação no painel da Seção de TI realizada com sucesso.',
+  },
+  {
+    id: 'log-2',
+    timestamp: pastDays(1),
+    militaryName: '2º Sgt Beatriz Silveira',
+    militaryLogin: 'xerife',
+    role: 'CH-XERIFEINFO',
+    actionType: 'ATRIBUIR_TECNICO',
+    summary: 'Atribuiu o chamado TICKET-1002 para o 3º Sgt Lucas Rocha.',
+    targetRef: 'TICKET-1002',
+  },
+];
+

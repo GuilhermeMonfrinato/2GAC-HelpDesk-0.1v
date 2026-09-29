@@ -12,15 +12,23 @@ import {
   ShieldCheck,
   AlertOctagon,
   AlertTriangle,
-  Shield
+  Shield,
+  MessageSquare,
+  CalendarPlus,
+  Send,
+  History,
+  User,
+  Info,
+  FileText
 } from 'lucide-react';
-import { NotebookLoan, Department, AccessibilitySettings } from '../types';
+import { NotebookLoan, Department, AccessibilitySettings, MilitaryUser, LoanHistoryItem, LoanMessage } from '../types';
 
 interface NotebookLoansProps {
   loans: NotebookLoan[];
   departments: Department[];
   a11y: AccessibilitySettings;
   adminPassword: string;
+  currentUser?: MilitaryUser | null;
   onAddLoan: (loan: Omit<NotebookLoan, 'id'>) => void;
   onReturnLoan: (
     loanId: string, 
@@ -31,6 +39,18 @@ interface NotebookLoansProps {
       notes: string;
       authorizedBy: string;
     }
+  ) => void;
+  onExtendLoan?: (
+    loanId: string,
+    newExpectedDate: string,
+    justification: string,
+    authorizedBy: string
+  ) => void;
+  onSendLoanMessage?: (
+    loanId: string,
+    content: string,
+    sender: 'militar' | 'ti',
+    senderName: string
   ) => void;
 }
 
@@ -50,8 +70,11 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
   departments,
   a11y,
   adminPassword,
+  currentUser,
   onAddLoan,
   onReturnLoan,
+  onExtendLoan,
+  onSendLoanMessage,
 }) => {
   // Filtros
   const [filterStatus, setFilterStatus] = useState<'all' | 'cautelado' | 'devolvido' | 'atrasado'>('all');
@@ -70,7 +93,7 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
     d.setDate(d.getDate() + 7);
     return d.toISOString().split('T')[0];
   });
-  const [authorizedRole, setAuthorizedRole] = useState('1º Ten Carlos Mendes (Ch Seç Info)');
+  const [authorizedRole, setAuthorizedRole] = useState(currentUser?.name || '1º Ten Carlos Mendes (Ch Seç Info)');
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
@@ -80,9 +103,27 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
   const [hasIssues, setHasIssues] = useState(false);
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
   const [returnNotes, setReturnNotes] = useState('');
-  const [returnAuthorizedRole, setReturnAuthorizedRole] = useState('1º Ten Carlos Mendes (Ch Seç Info)');
+  const [returnAuthorizedRole, setReturnAuthorizedRole] = useState(currentUser?.name || '1º Ten Carlos Mendes (Ch Seç Info)');
   const [returnPassword, setReturnPassword] = useState('');
   const [returnAuthError, setReturnAuthError] = useState('');
+
+  // Modal Prorrogação da Entrega
+  const [activeLoanForExtension, setActiveLoanForExtension] = useState<NotebookLoan | null>(null);
+  const [newExtensionDate, setNewExtensionDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split('T')[0];
+  });
+  const [extensionJustification, setExtensionJustification] = useState('');
+  const [extensionAuthorizedBy, setExtensionAuthorizedBy] = useState(currentUser?.name || '1º Ten Carlos Mendes');
+  const [extensionError, setExtensionError] = useState('');
+
+  // Modal Chat & Histórico da Cautela
+  const [activeLoanForChat, setActiveLoanForChat] = useState<NotebookLoan | null>(null);
+  const [loanChatInput, setLoanChatInput] = useState('');
+  const [loanChatSender, setLoanChatSender] = useState<'ti' | 'militar'>('ti');
+
+  const isTV = currentUser?.role === 'CH-TVINFO';
 
   // Verificação de atrasos
   const todayStr = new Date().toISOString().split('T')[0];
@@ -177,6 +218,101 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
     setReturnNotes('');
     setReturnPassword('');
     setReturnAuthError('');
+  };
+
+  // Submissão de Prorrogação da Entrega (para parar de ficar no status EM ATRASO)
+  const handleConfirmExtension = (e: React.FormEvent) => {
+    e.preventDefault();
+    setExtensionError('');
+
+    if (!activeLoanForExtension) return;
+
+    if (newExtensionDate < todayStr) {
+      setExtensionError('A nova data prevista deve ser hoje ou uma data futura.');
+      return;
+    }
+
+    if (!extensionJustification.trim()) {
+      setExtensionError('A justificativa da prorrogação é obrigatória para o histórico militar.');
+      return;
+    }
+
+    if (onExtendLoan) {
+      onExtendLoan(
+        activeLoanForExtension.id,
+        newExtensionDate,
+        extensionJustification.trim(),
+        extensionAuthorizedBy.trim() || currentUser?.name || 'Seção de TI'
+      );
+    }
+
+    // Se o modal de chat estiver aberto com este notebook, atualiza a referência
+    if (activeLoanForChat && activeLoanForChat.id === activeLoanForExtension.id) {
+      setActiveLoanForChat(prev => prev ? {
+        ...prev,
+        expectedReturnDate: newExtensionDate,
+        extensionCount: (prev.extensionCount || 0) + 1,
+        lastExtensionReason: extensionJustification.trim(),
+        history: [
+          ...(prev.history || []),
+          {
+            id: `lh-${Date.now()}`,
+            date: new Date().toISOString(),
+            author: extensionAuthorizedBy.trim() || currentUser?.name || 'Seção de TI',
+            action: 'prorrogacao',
+            summary: `Prorrogação de entrega autorizada até ${new Date(newExtensionDate + 'T00:00:00').toLocaleDateString('pt-BR')}. Motivo: ${extensionJustification.trim()}`,
+            previousDate: activeLoanForExtension.expectedReturnDate,
+            newDate: newExtensionDate,
+            justification: extensionJustification.trim(),
+          }
+        ],
+        messages: [
+          ...(prev.messages || []),
+          {
+            id: `lm-${Date.now()}`,
+            sender: 'ti',
+            senderName: extensionAuthorizedBy.trim() || currentUser?.name || 'Seção de TI',
+            content: `[PRORROGAÇÃO REGISTRADA] Devolução prorrogada de ${new Date(activeLoanForExtension.expectedReturnDate + 'T00:00:00').toLocaleDateString('pt-BR')} para ${new Date(newExtensionDate + 'T00:00:00').toLocaleDateString('pt-BR')}. Justificativa: ${extensionJustification.trim()}`,
+            createdAt: new Date().toISOString(),
+          }
+        ]
+      } : null);
+    }
+
+    setActiveLoanForExtension(null);
+    setExtensionJustification('');
+    setExtensionError('');
+  };
+
+  // Enviar mensagem no Chat da Cautela
+  const handleSendLoanChatMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeLoanForChat || !loanChatInput.trim()) return;
+
+    const senderName = loanChatSender === 'ti' 
+      ? (currentUser?.name ? `${currentUser.name} (TI)` : 'Seção de Informática')
+      : activeLoanForChat.borrowerName;
+
+    if (onSendLoanMessage) {
+      onSendLoanMessage(activeLoanForChat.id, loanChatInput.trim(), loanChatSender, senderName);
+    }
+
+    // Atualiza localmente
+    setActiveLoanForChat(prev => prev ? {
+      ...prev,
+      messages: [
+        ...(prev.messages || []),
+        {
+          id: `lm-${Date.now()}`,
+          sender: loanChatSender,
+          senderName,
+          content: loanChatInput.trim(),
+          createdAt: new Date().toISOString(),
+        }
+      ]
+    } : null);
+
+    setLoanChatInput('');
   };
 
   const toggleIssue = (issue: string) => {
@@ -405,26 +541,77 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
                     </div>
                   </div>
 
-                  {/* Status & Botão de Devolução */}
-                  <div className="flex items-center gap-3 self-end md:self-auto">
+                  {/* Status & Botões de Ação */}
+                  <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
                     {isReturned ? (
-                      <span className="px-3.5 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1.5 border border-emerald-200">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>DESCAUTELADO / DEVOLVIDO</span>
+                      <span className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1.5 border border-emerald-200">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                        <span>DESCAUTELADO</span>
                       </span>
                     ) : isOverdue ? (
-                      <span className="px-3.5 py-1.5 rounded-xl bg-red-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs">
+                      <span className="px-3 py-1.5 rounded-xl bg-red-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs animate-pulse">
                         <AlertTriangle className="w-4 h-4" />
                         <span>EM ATRASO</span>
                       </span>
+                    ) : (loan.extensionCount && loan.extensionCount > 0) ? (
+                      <span className="px-3 py-1.5 rounded-xl bg-[#dfb642] text-[#192b14] font-black text-xs flex items-center gap-1.5 border border-[#cba135] shadow-xs">
+                        <CalendarPlus className="w-4 h-4" />
+                        <span>PRAZO PRORROGADO ({loan.extensionCount}x)</span>
+                      </span>
                     ) : (
-                      <span className="px-3.5 py-1.5 rounded-xl bg-amber-100 text-amber-900 font-bold text-xs flex items-center gap-1.5 border border-amber-200">
+                      <span className="px-3 py-1.5 rounded-xl bg-amber-100 text-amber-900 font-bold text-xs flex items-center gap-1.5 border border-amber-200">
                         <Clock className="w-4 h-4" />
                         <span>CAUTELADO (EM DIA)</span>
                       </span>
                     )}
 
-                    {!isReturned && (
+                    {/* Botão de Histórico e Chat do Notebook */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveLoanForChat(loan);
+                        setLoanChatInput('');
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 transition-colors border border-slate-300"
+                      title="Ver histórico de ocorrências e mensagens desta cautela"
+                    >
+                      <MessageSquare className="w-4 h-4 text-[#27431e]" />
+                      <span>Chat & Histórico</span>
+                      {((loan.messages?.length || 0) + (loan.history?.length || 0)) > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full bg-[#1e3316] text-[#dfb642] font-mono text-[10px]">
+                          {(loan.messages?.length || 0) + (loan.history?.length || 0)}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Botão Prorrogar Devolução */}
+                    {!isReturned && !isTV && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveLoanForExtension(loan);
+                          // Default nova data: data prevista atual + 7 dias (ou hoje + 7 dias se atrasado)
+                          const baseDate = isOverdue ? new Date() : new Date(loan.expectedReturnDate + 'T00:00:00');
+                          baseDate.setDate(baseDate.getDate() + 7);
+                          setNewExtensionDate(baseDate.toISOString().split('T')[0]);
+                          setExtensionJustification('');
+                          setExtensionAuthorizedBy(currentUser?.name || '1º Ten Carlos Mendes');
+                          setExtensionError('');
+                        }}
+                        className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs ${
+                          isOverdue 
+                            ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black ring-2 ring-amber-400' 
+                            : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300'
+                        }`}
+                        title="Prorrogar o prazo de devolução e justificar no histórico"
+                      >
+                        <CalendarPlus className="w-4 h-4 text-amber-900" />
+                        <span>Prorrogar Devolução</span>
+                      </button>
+                    )}
+
+                    {/* Botão Descautela */}
+                    {!isReturned && !isTV && (
                       <button
                         onClick={() => {
                           setActiveLoanForReturn(loan);
@@ -435,10 +622,10 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
                           setReturnPassword('');
                           setReturnAuthError('');
                         }}
-                        className="px-4 py-2 rounded-xl bg-[#27431e] text-[#dfb642] font-bold text-xs flex items-center gap-1.5 hover:bg-[#1e3316] shadow-xs transition-colors border border-[#cba135]/40"
+                        className="px-3 py-1.5 rounded-xl bg-[#27431e] text-[#dfb642] font-bold text-xs flex items-center gap-1.5 hover:bg-[#1e3316] shadow-xs transition-colors border border-[#cba135]/40"
                       >
                         <RotateCcw className="w-4 h-4" />
-                        <span>Realizar Descautela (Devolução)</span>
+                        <span>Descautelar</span>
                       </button>
                     )}
                   </div>
@@ -458,8 +645,21 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
                     </span>
                   </div>
 
-                  <div className={`p-3 rounded-xl border ${isOverdue ? 'bg-red-50 border-red-300' : 'bg-white border-slate-200'}`}>
-                    <span className="text-slate-400 font-bold block mb-0.5">Previsão de Devolução:</span>
+                  <div className={`p-3 rounded-xl border ${
+                    isOverdue 
+                      ? 'bg-red-50 border-red-300 ring-1 ring-red-400' 
+                      : (loan.extensionCount && loan.extensionCount > 0)
+                        ? 'bg-amber-50/70 border-amber-300'
+                        : 'bg-white border-slate-200'
+                  }`}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-slate-500 font-bold block">Previsão de Devolução:</span>
+                      {loan.extensionCount && loan.extensionCount > 0 ? (
+                        <span className="px-1.5 py-0.2 rounded bg-[#dfb642] text-[#192b14] font-mono text-[9px] font-black uppercase">
+                          Prorrogado {loan.extensionCount}x
+                        </span>
+                      ) : null}
+                    </div>
                     <span className={`font-semibold text-sm flex items-center gap-1.5 ${isOverdue ? 'text-red-700 font-bold' : 'text-slate-800'}`}>
                       <Calendar className="w-4 h-4 text-amber-600" />
                       {new Date(loan.expectedReturnDate + 'T00:00:00').toLocaleDateString('pt-BR')}
@@ -468,8 +668,10 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
                       {isReturned 
                         ? `Descautelado em ${new Date(loan.actualReturnDate + 'T00:00:00').toLocaleDateString('pt-BR')}`
                         : isOverdue 
-                          ? 'Atrasado! Solicitar devolução imediata à Seção.' 
-                          : 'Dentro do prazo regulamentar.'}
+                          ? 'Atrasado! Regularize solicitando prorrogação com justificativa ou descautela imediata.' 
+                          : loan.lastExtensionReason 
+                            ? `Motivo prorrogação: "${loan.lastExtensionReason}"`
+                            : 'Dentro do prazo regulamentar.'}
                     </span>
                   </div>
 
@@ -923,6 +1125,371 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
         </div>
       )}
 
+      {/* MODAL 2: PRORROGAR PRAZO DE DEVOLUÇÃO (PARA PARAR DE FICAR EM ATRASO) */}
+      {activeLoanForExtension && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-2xl border border-amber-500/40">
+            
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-amber-500 text-slate-950 font-black">
+                  <CalendarPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 leading-tight">
+                    Prorrogar Devolução de Notebook
+                  </h3>
+                  <span className="text-xs text-slate-500 font-mono">
+                    {activeLoanForExtension.notebookNumber} · {activeLoanForExtension.notebookName}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setActiveLoanForExtension(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmExtension} className="space-y-4 text-xs">
+              
+              {/* Informações Atuais */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                <div className="flex justify-between items-center text-slate-700">
+                  <span>Militar Cautelante:</span>
+                  <strong className="text-slate-900">{activeLoanForExtension.borrowerName}</strong>
+                </div>
+                <div className="flex justify-between items-center text-slate-700">
+                  <span>Previsão Atual:</span>
+                  <strong className="text-red-700 font-mono">
+                    {new Date(activeLoanForExtension.expectedReturnDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    {isLoanOverdue(activeLoanForExtension) && ' (EM ATRASO)'}
+                  </strong>
+                </div>
+                {activeLoanForExtension.extensionCount && activeLoanForExtension.extensionCount > 0 ? (
+                  <div className="flex justify-between items-center text-slate-500 text-[11px]">
+                    <span>Total de Prorrogações Anteriores:</span>
+                    <span className="font-mono font-bold text-amber-700">{activeLoanForExtension.extensionCount} vez(es)</span>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Nova Data Prevista */}
+              <div>
+                <label className="block font-bold text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#27431e]" />
+                  <span>Nova Data Prevista para Entrega:</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  min={todayStr}
+                  value={newExtensionDate}
+                  onChange={(e) => setNewExtensionDate(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold bg-white focus:ring-2 focus:ring-[#27431e]"
+                />
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Ao selecionar uma data igual ou posterior a hoje, o status sairá imediatamente de <strong>"EM ATRASO"</strong>.
+                </span>
+              </div>
+
+              {/* Justificativa Obrigatória */}
+              <div>
+                <label className="block font-bold text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[#27431e]" />
+                  <span>Motivo / Justificativa da Prorrogação:</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Ex: Prorrogação autorizada pelo Cmt para apoio ao exercício de tiro da 2ª Bia O no campo de instrução."
+                  value={extensionJustification}
+                  onChange={(e) => setExtensionJustification(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-[#27431e]"
+                />
+              </div>
+
+              {/* Militar Autorizador */}
+              <div>
+                <label className="block font-bold text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#27431e]" />
+                  <span>Militar Autorizador (TI / Chefia):</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={extensionAuthorizedBy}
+                  onChange={(e) => setExtensionAuthorizedBy(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white"
+                />
+              </div>
+
+              {extensionError && (
+                <div className="p-2.5 rounded-xl bg-red-50 text-red-800 font-bold border border-red-300 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+                  <span>{extensionError}</span>
+                </div>
+              )}
+
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-[11px] flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span>
+                  Esta prorrogação será registrada no <strong>Chat Histórico</strong> do notebook e nos <strong>Logs de Auditoria</strong> da Seção de TI.
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setActiveLoanForExtension(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold hover:bg-slate-100 text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-[#1e3316] hover:bg-[#27431e] text-[#dfb642] font-black shadow-md border border-[#cba135]/50 flex items-center gap-1.5"
+                >
+                  <CalendarPlus className="w-4 h-4" />
+                  <span>Confirmar Prorrogação</span>
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: CHAT HISTÓRICO DA CAUTELA */}
+      {activeLoanForChat && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 space-y-4 shadow-2xl border border-[#27431e]/30 max-h-[92vh] flex flex-col">
+            
+            {/* Cabeçalho do Chat */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-[#1e3316] text-[#dfb642]">
+                  <MessageSquare className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-slate-900">
+                      Chat & Histórico da Cautela
+                    </h3>
+                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-bold border">
+                      {activeLoanForChat.notebookNumber}
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium block">
+                    {activeLoanForChat.notebookName} · Responsável: <strong>{activeLoanForChat.borrowerName}</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Botão Atalho Prorrogar dentro do Chat */}
+                {activeLoanForChat.status !== 'devolvido' && !isTV && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const loanToExtend = activeLoanForChat;
+                      setActiveLoanForExtension(loanToExtend);
+                      const baseDate = isLoanOverdue(loanToExtend) ? new Date() : new Date(loanToExtend.expectedReturnDate + 'T00:00:00');
+                      baseDate.setDate(baseDate.getDate() + 7);
+                      setNewExtensionDate(baseDate.toISOString().split('T')[0]);
+                      setExtensionJustification('');
+                      setExtensionAuthorizedBy(currentUser?.name || '1º Ten Carlos Mendes');
+                      setExtensionError('');
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-[#dfb642] text-[#192b14] font-black text-xs flex items-center gap-1.5 hover:bg-[#cba135] shadow-xs"
+                    title="Prorrogar data prevista de entrega deste notebook"
+                  >
+                    <CalendarPlus className="w-4 h-4" />
+                    <span>Prorrogar Prazo</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setActiveLoanForChat(null)}
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Faixa de Status Atual */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+              <div className="flex items-center gap-3">
+                <span className="text-slate-500">Prazo de Entrega:</span>
+                <span className="font-mono font-bold text-slate-900">
+                  {new Date(activeLoanForChat.expectedReturnDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                </span>
+                {isLoanOverdue(activeLoanForChat) ? (
+                  <span className="px-2 py-0.5 rounded-md bg-red-600 text-white font-bold text-[10px] animate-pulse">
+                    EM ATRASO
+                  </span>
+                ) : (activeLoanForChat.extensionCount && activeLoanForChat.extensionCount > 0) ? (
+                  <span className="px-2 py-0.5 rounded-md bg-[#dfb642] text-[#192b14] font-bold text-[10px]">
+                    PRORROGADO ({activeLoanForChat.extensionCount}x)
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                    EM DIA
+                  </span>
+                )}
+              </div>
+
+              {activeLoanForChat.status === 'devolvido' && (
+                <span className="text-emerald-700 font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Descautelado
+                </span>
+              )}
+            </div>
+
+            {/* Container de Mensagens e Linha do Tempo */}
+            <div className="flex-1 overflow-y-auto space-y-3 p-3 bg-slate-50/70 rounded-2xl border border-slate-200 min-h-[260px] max-h-[380px]">
+              
+              {/* Evento Inicial de Cautela */}
+              <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs shadow-2xs">
+                <div className="flex items-center justify-between font-bold text-slate-700 mb-1">
+                  <span className="flex items-center gap-1.5 text-[#1e3316]">
+                    <Shield className="w-3.5 h-3.5 text-[#dfb642]" />
+                    <span>Cautela Inicial Realizada</span>
+                  </span>
+                  <span className="text-slate-400 font-mono text-[10px]">
+                    {new Date(activeLoanForChat.loanDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+                <p className="text-slate-600">
+                  Notebook retirado da TI por <strong>{activeLoanForChat.borrowerName}</strong>. Autorizado por: <strong>{activeLoanForChat.authorizedBy}</strong>.
+                </p>
+              </div>
+
+              {/* Histórico Registrado */}
+              {activeLoanForChat.history?.map((h) => (
+                <div 
+                  key={h.id} 
+                  className={`p-3 rounded-xl border text-xs shadow-2xs ${
+                    h.action === 'prorrogacao' 
+                      ? 'bg-amber-50/80 border-amber-300 text-amber-950' 
+                      : h.action === 'devolucao'
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                        : 'bg-white border-slate-200 text-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between font-bold mb-1">
+                    <span className="flex items-center gap-1.5">
+                      {h.action === 'prorrogacao' && <CalendarPlus className="w-3.5 h-3.5 text-amber-700" />}
+                      {h.action === 'devolucao' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />}
+                      {h.action !== 'prorrogacao' && h.action !== 'devolucao' && <History className="w-3.5 h-3.5 text-slate-500" />}
+                      <span className="uppercase text-[11px] font-black">{h.author} · {h.action}</span>
+                    </span>
+                    <span className="text-slate-400 font-mono text-[10px]">
+                      {new Date(h.date).toLocaleDateString('pt-BR')} {new Date(h.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="leading-relaxed font-medium">{h.summary}</p>
+                  {h.justification && (
+                    <div className="mt-1 pt-1 border-t border-amber-200/60 text-[11px] text-amber-900">
+                      <strong>Justificativa Militar:</strong> {h.justification}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Mensagens de Chat */}
+              {activeLoanForChat.messages?.map((m) => {
+                const isTi = m.sender === 'ti';
+                return (
+                  <div
+                    key={m.id}
+                    className={`flex flex-col ${isTi ? 'items-end' : 'items-start'}`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1 px-1">
+                      <span className="text-[10px] font-bold text-slate-500 font-mono">
+                        {m.senderName}
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-mono">
+                        {new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <div className={`p-3 rounded-2xl max-w-[85%] text-xs shadow-2xs ${
+                      isTi 
+                        ? 'bg-[#1e3316] text-[#dfb642] rounded-tr-xs border border-[#cba135]/40' 
+                        : 'bg-white text-slate-900 rounded-tl-xs border border-slate-200'
+                    }`}>
+                      <p className="whitespace-pre-wrap">{m.content}</p>
+                    </div>
+                  </div>
+                );
+              })}
+
+            </div>
+
+            {/* Formulário para Enviar Nova Mensagem / Observação */}
+            {activeLoanForChat.status !== 'devolvido' && !isTV ? (
+              <form onSubmit={handleSendLoanChatMessage} className="space-y-2 pt-2 border-t border-slate-200">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-slate-600">Registrar como:</span>
+                    <button
+                      type="button"
+                      onClick={() => setLoanChatSender('ti')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        loanChatSender === 'ti' 
+                          ? 'bg-[#1e3316] text-[#dfb642]' 
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Seção de TI
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLoanChatSender('militar')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        loanChatSender === 'militar' 
+                          ? 'bg-[#27431e] text-white' 
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Militar Cautelante
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Adicionar recado, orientação ou informe militar sobre o notebook..."
+                    value={loanChatInput}
+                    onChange={(e) => setLoanChatInput(e.target.value)}
+                    className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs bg-white text-slate-900 focus:ring-2 focus:ring-[#27431e]"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2.5 rounded-xl bg-[#1e3316] text-[#dfb642] font-black text-xs flex items-center gap-1.5 hover:bg-[#27431e] transition-colors border border-[#cba135]"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Enviar</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-3 text-center text-xs text-slate-500 italic bg-slate-100 rounded-xl">
+                {isTV ? 'Modo Visualizador CH-TVINFO: Sem permissão de interação.' : 'Equipamento descautelado e arquivado.'}
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
+

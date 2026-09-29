@@ -21,23 +21,31 @@ import {
   HelpCircle, 
   ArrowRight,
   Shield,
-  MessageSquare
+  MessageSquare,
+  Edit3,
+  Zap,
+  Radio,
+  Lock,
+  Sparkles
 } from 'lucide-react';
-import { Ticket, Department, Technician, Priority, TicketStatus, AccessibilitySettings } from '../types';
+import { Ticket, Department, Technician, Priority, TicketStatus, AccessibilitySettings, MilitaryUser } from '../types';
 
 interface ITDashboardProps {
   tickets: Ticket[];
   departments: Department[];
   technicians: Technician[];
   a11y: AccessibilitySettings;
+  currentUser?: MilitaryUser | null;
   onUpdateTicketStatus: (ticketId: string, newStatus: TicketStatus, notes?: string) => void;
   onUpdateTicketPriority: (ticketId: string, newPriority: Priority) => void;
+  onUpdateTicketTitle?: (ticketId: string, newTitle: string) => void;
   onAssignTechnician: (ticketId: string, technicianId: string) => void;
   onAddTicketHistory: (ticketId: string, comment: string, author: string) => void;
   onDeleteTicket: (ticketId: string) => void;
   onOpenTvMode: () => void;
   onSendMessage: (ticketId: string, content: string, sender: 'solicitante' | 'ti', senderName: string) => void;
   onMarkMessagesAsRead: (ticketId: string) => void;
+  onMassIntervention?: (message: string) => void;
 }
 
 interface DropRequirement {
@@ -50,15 +58,38 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
   departments,
   technicians,
   a11y,
+  currentUser,
   onUpdateTicketStatus,
   onUpdateTicketPriority,
+  onUpdateTicketTitle,
   onAssignTechnician,
   onAddTicketHistory,
   onDeleteTicket,
   onOpenTvMode,
   onSendMessage,
   onMarkMessagesAsRead,
+  onMassIntervention,
 }) => {
+  // Controle de Permissões baseado no Perfil Militar
+  const userRole = currentUser?.role || 'CH-SECINFO';
+  const isTV = userRole === 'CH-TVINFO';
+  const isTecnico = userRole === 'CH-TECNICOINFO';
+  const isXerife = userRole === 'CH-XERIFEINFO';
+  const isChefe = userRole === 'CH-SECINFO';
+
+  // Regras estritas solicitadas:
+  // CH-SECINFO: total
+  // CH-TVINFO: apenas exibição, sem interação
+  // CH-TECNICOINFO: consultar, responder, trocar de bloco
+  // CH-XERIFEINFO: setar técnicos, intervir em todos, trocar prioridade, excluir, editar nome
+  const canAssignTech = isXerife || isChefe;
+  const canChangePriority = isXerife || isChefe;
+  const canDelete = isXerife || isChefe;
+  const canEditTitle = isXerife || isChefe;
+  const canMassIntervene = isXerife || isChefe;
+  const canMoveStatus = !isTV;
+  const canReplyChat = !isTV;
+
   // Filtros
   const [selectedDeptId, setSelectedDeptId] = useState<string>('all');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
@@ -72,9 +103,17 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
   // Modal de Detalhes
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
   const [newNote, setNewNote] = useState<string>('');
-  const [authorName, setAuthorName] = useState<string>('Seção de TI');
+  const [authorName, setAuthorName] = useState<string>(currentUser?.name || 'Seção de TI');
   const [resolutionText, setResolutionText] = useState<string>('');
   const [tiChatInput, setTiChatInput] = useState<string>('');
+
+  // Edição do Nome/Título do Chamado (Exclusivo Xerife e Chefe)
+  const [editingTicketTitle, setEditingTicketTitle] = useState<{ id: string; code: string; title: string } | null>(null);
+  const [newTitleInput, setNewTitleInput] = useState<string>('');
+
+  // Intervenção em Massa do Xerife
+  const [showMassInterventionModal, setShowMassInterventionModal] = useState<boolean>(false);
+  const [massInterventionText, setMassInterventionText] = useState<string>('');
 
   // Drag and Drop State
   const [draggedTicketId, setDraggedTicketId] = useState<string | null>(null);
@@ -273,9 +312,62 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
     setResolutionText('');
   };
 
+  // Funções exclusivas do Xerife e Chefe da Seção
+  const handleStartEditTitle = (ticket: Ticket) => {
+    if (!canEditTitle) return;
+    setEditingTicketTitle({ id: ticket.id, code: ticket.code, title: ticket.title });
+    setNewTitleInput(ticket.title);
+  };
+
+  const handleConfirmEditTitle = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTicketTitle || !newTitleInput.trim()) return;
+    if (onUpdateTicketTitle) {
+      onUpdateTicketTitle(editingTicketTitle.id, newTitleInput.trim());
+    }
+    if (activeTicket && activeTicket.id === editingTicketTitle.id) {
+      setActiveTicket(prev => prev ? { ...prev, title: newTitleInput.trim() } : null);
+    }
+    setEditingTicketTitle(null);
+    setNewTitleInput('');
+  };
+
+  const handleConfirmMassIntervention = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!massInterventionText.trim() || !onMassIntervention) return;
+    onMassIntervention(massInterventionText.trim());
+    setShowMassInterventionModal(false);
+    setMassInterventionText('');
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 space-y-6">
       
+      {/* Banner de Modo TV Sem Interação (CH-TVINFO) */}
+      {isTV && (
+        <div className="p-4 rounded-2xl bg-slate-900 border-2 border-yellow-400 text-yellow-300 text-xs font-mono font-bold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-yellow-400 text-black">
+              <Tv className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <span className="text-sm font-black text-white block">
+                MODO CH-TVINFO · EXIBIÇÃO DE CHAMADOS (SEM INTERAÇÃO)
+              </span>
+              <span className="text-slate-300 font-normal">
+                Este perfil possui acesso exclusivo para monitoramento no telão da sala. Interações e respostas estão bloqueadas.
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onOpenTvMode}
+            className="px-4 py-2 rounded-xl bg-yellow-400 text-black font-black uppercase text-xs hover:bg-yellow-300 transition-colors shrink-0"
+          >
+            Abrir Telão Fullscreen →
+          </button>
+        </div>
+      )}
+
       {/* Alerta de Chamado Crítico com Toggle de 2 cliques */}
       {criticalCount > 0 && (
         <div className={`p-4 rounded-2xl flex items-center justify-between shadow-md transition-all ${
@@ -380,8 +472,25 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
           </div>
         </div>
 
-        {/* Botão de Exibição Ampla na TV da Sala */}
-        <div className="shrink-0 flex items-center">
+        {/* Botão de Exibição Ampla na TV da Sala e Intervenção do Xerife */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2.5">
+          {canMassIntervene && (
+            <button
+              onClick={() => {
+                setShowMassInterventionModal(true);
+                setMassInterventionText('');
+              }}
+              className="px-4 py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md border border-amber-700 transition-all active:scale-[0.99]"
+              title="Intervenção do Xerife: Enviar comunicado/despacho em massa para todos os chamados em aberto"
+            >
+              <Zap className="w-4 h-4 text-yellow-300" />
+              <div className="text-left">
+                <span className="block leading-none">Intervenção do Xerife</span>
+                <span className="text-[9px] text-amber-200 font-mono block mt-0.5">Despacho em Todos os Chamados</span>
+              </div>
+            </button>
+          )}
+
           <button
             onClick={onOpenTvMode}
             className="w-full sm:w-auto px-5 py-4 rounded-2xl bg-[#1e3316] text-[#dfb642] font-black text-sm flex items-center justify-center gap-2.5 hover:bg-[#27431e] transition-all shadow-md border-2 border-[#cba135] active:scale-[0.99]"
@@ -406,7 +515,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
             <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Buscar por código (#CH-1001), militar solicitante, seção da OM ou técnico..."
+              placeholder="Buscar por código (#TICKET-1001), militar solicitante, seção da OM ou técnico..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:ring-2 focus:ring-[#27431e] bg-slate-50 focus:bg-white"
@@ -535,7 +644,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
 
       {/* MODO 1: QUADRO KANBAN INTERATIVO COM DRAG & DROP */}
       {viewMode === 'kanban' && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
           
           {/* Coluna 1: Abertos / Triagem */}
           <div 
@@ -582,6 +691,10 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   ticket={ticket}
                   departments={departments}
                   technicians={technicians}
+                  canAssign={canAssignTech}
+                  canDelete={canDelete}
+                  canEditTitle={canEditTitle}
+                  canMoveStatus={canMoveStatus}
                   onClick={() => {
                     setActiveTicket(ticket);
                     onMarkMessagesAsRead(ticket.id);
@@ -594,6 +707,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   }}
                   onQuickResolve={() => handleQuickResolve(ticket)}
                   onDelete={() => handleDeleteTicket(ticket)}
+                  onEditTitle={() => handleStartEditTitle(ticket)}
                   onDragStart={(e) => handleDragStart(e, ticket)}
                 />
               ))}
@@ -609,6 +723,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
           {/* Coluna 2: Em Atendimento */}
           <div 
             onDragOver={(e) => {
+              if (!canMoveStatus) return;
               e.preventDefault();
               e.dataTransfer.dropEffect = 'move';
               if (dragOverColumn !== 'em_atendimento') setDragOverColumn('em_atendimento');
@@ -619,6 +734,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
               }
             }}
             onDrop={(e) => {
+              if (!canMoveStatus) return;
               e.preventDefault();
               handleDropOnColumn('em_atendimento');
             }}
@@ -651,6 +767,10 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   ticket={ticket}
                   departments={departments}
                   technicians={technicians}
+                  canAssign={canAssignTech}
+                  canDelete={canDelete}
+                  canEditTitle={canEditTitle}
+                  canMoveStatus={canMoveStatus}
                   onClick={() => {
                     setActiveTicket(ticket);
                     onMarkMessagesAsRead(ticket.id);
@@ -662,6 +782,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   }}
                   onQuickResolve={() => handleQuickResolve(ticket)}
                   onDelete={() => handleDeleteTicket(ticket)}
+                  onEditTitle={() => handleStartEditTitle(ticket)}
                   onDragStart={(e) => handleDragStart(e, ticket)}
                 />
               ))}
@@ -677,6 +798,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
           {/* Coluna 3: Aguardando Peça */}
           <div 
             onDragOver={(e) => {
+              if (!canMoveStatus) return;
               e.preventDefault();
               e.dataTransfer.dropEffect = 'move';
               if (dragOverColumn !== 'aguardando') setDragOverColumn('aguardando');
@@ -687,6 +809,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
               }
             }}
             onDrop={(e) => {
+              if (!canMoveStatus) return;
               e.preventDefault();
               handleDropOnColumn('aguardando');
             }}
@@ -719,6 +842,10 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   ticket={ticket}
                   departments={departments}
                   technicians={technicians}
+                  canAssign={canAssignTech}
+                  canDelete={canDelete}
+                  canEditTitle={canEditTitle}
+                  canMoveStatus={canMoveStatus}
                   onClick={() => {
                     setActiveTicket(ticket);
                     onMarkMessagesAsRead(ticket.id);
@@ -731,6 +858,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   }}
                   onQuickResolve={() => handleQuickResolve(ticket)}
                   onDelete={() => handleDeleteTicket(ticket)}
+                  onEditTitle={() => handleStartEditTitle(ticket)}
                   onDragStart={(e) => handleDragStart(e, ticket)}
                 />
               ))}
@@ -746,6 +874,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
           {/* Coluna 4: Resolvidos */}
           <div 
             onDragOver={(e) => {
+              if (!canMoveStatus) return;
               e.preventDefault();
               e.dataTransfer.dropEffect = 'move';
               if (dragOverColumn !== 'resolvido') setDragOverColumn('resolvido');
@@ -756,6 +885,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
               }
             }}
             onDrop={(e) => {
+              if (!canMoveStatus) return;
               e.preventDefault();
               handleDropOnColumn('resolvido');
             }}
@@ -788,6 +918,10 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   ticket={ticket}
                   departments={departments}
                   technicians={technicians}
+                  canAssign={canAssignTech}
+                  canDelete={canDelete}
+                  canEditTitle={canEditTitle}
+                  canMoveStatus={canMoveStatus}
                   onClick={() => {
                     setActiveTicket(ticket);
                     onMarkMessagesAsRead(ticket.id);
@@ -795,6 +929,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   onQuickAssign={(techId) => onAssignTechnician(ticket.id, techId)}
                   onQuickResolve={() => handleQuickResolve(ticket)}
                   onDelete={() => handleDeleteTicket(ticket)}
+                  onEditTitle={() => handleStartEditTitle(ticket)}
                   onDragStart={(e) => handleDragStart(e, ticket)}
                 />
               ))}
@@ -839,6 +974,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                     const dept = departments.find(d => d.id === t.departmentId);
                     const tech = technicians.find(tc => tc.id === t.technicianId);
                     const pStyle = getPriorityStyle(t.priority);
+                    const isResolved = t.status === 'resolvido';
 
                     return (
                       <tr 
@@ -862,15 +998,47 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase font-mono ${pStyle.bg}`}>
-                            {t.priority}
-                          </span>
+                          {canChangePriority ? (
+                            <select
+                              value={t.priority}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                onUpdateTicketPriority(t.id, e.target.value as Priority);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className={`px-2 py-1 rounded text-[11px] font-bold uppercase font-mono ${pStyle.bg} cursor-pointer border-0 shadow-2xs`}
+                            >
+                              <option value="baixa">Baixa</option>
+                              <option value="media">Média</option>
+                              <option value="alta">Alta</option>
+                              <option value="critica">Crítica</option>
+                            </select>
+                          ) : (
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase font-mono ${pStyle.bg}`}>
+                              {t.priority}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="font-semibold text-slate-900">{t.requesterName}</div>
                         </td>
                         <td className="py-3.5 px-4 max-w-xs">
-                          <div className="font-medium text-slate-900 truncate">{t.title}</div>
+                          <div className="flex items-center gap-1.5 font-medium text-slate-900">
+                            <span className="truncate">{t.title}</span>
+                            {canEditTitle && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStartEditTitle(t);
+                                }}
+                                className="p-1 rounded text-slate-400 hover:text-[#192b14] hover:bg-slate-200 shrink-0"
+                                title="Editar Nome do Chamado (Xerife / Chefe)"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                           <div className="text-slate-500 truncate text-[11px]">{t.description}</div>
                           {t.messages && t.messages.length > 0 && (
                             <div className="mt-1 flex items-center gap-1">
@@ -896,23 +1064,30 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                           </span>
                         </td>
                         <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                          <select
-                            value={t.technicianId || ''}
-                            onChange={(e) => onAssignTechnician(t.id, e.target.value)}
-                            className="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-800 bg-white"
-                          >
-                            <option value="">Não Atribuído</option>
-                            {technicians.map(tc => (
-                              <option key={tc.id} value={tc.id}>
-                                {tc.name}
-                              </option>
-                            ))}
-                          </select>
+                          {canAssignTech ? (
+                            <select
+                              value={t.technicianId || ''}
+                              onChange={(e) => onAssignTechnician(t.id, e.target.value)}
+                              className="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-800 bg-white"
+                            >
+                              <option value="">Não Atribuído</option>
+                              {technicians.map(tc => (
+                                <option key={tc.id} value={tc.id}>
+                                  {tc.name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div className="flex items-center gap-1 text-slate-600 font-bold text-xs bg-slate-100 px-2 py-1 rounded-md">
+                              <Lock className="w-3 h-3 text-slate-400" />
+                              <span className="truncate">{tech ? tech.name : 'Não Atribuído'}</span>
+                            </div>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1.5">
                             {/* Botão de Fechar / Concluir (Check) */}
-                            {t.status !== 'resolvido' ? (
+                            {!isResolved && canMoveStatus ? (
                               <button
                                 onClick={() => handleQuickResolve(t)}
                                 className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-100 border border-emerald-300 transition-colors"
@@ -920,20 +1095,22 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                               >
                                 <CheckCircle2 className="w-4 h-4" />
                               </button>
-                            ) : (
+                            ) : isResolved ? (
                               <span className="p-1.5 text-emerald-600" title="Chamado já resolvido">
                                 <CheckCircle2 className="w-4 h-4" />
                               </span>
-                            )}
+                            ) : null}
 
-                            {/* Botão de Excluir (Lixeira) */}
-                            <button
-                              onClick={() => handleDeleteTicket(t)}
-                              className="p-1.5 rounded-lg text-red-600 hover:bg-red-100 border border-red-200 transition-colors"
-                              title="Excluir Chamado"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {/* Botão de Excluir (Lixeira) - só Xerife e Chefe */}
+                            {canDelete && (
+                              <button
+                                onClick={() => handleDeleteTicket(t)}
+                                className="p-1.5 rounded-lg text-red-600 hover:bg-red-100 border border-red-200 transition-colors"
+                                title="Excluir Chamado (Xerife / Chefe)"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
 
                             {/* Detalhes */}
                             <button
@@ -1529,6 +1706,140 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
         </div>
       )}
 
+      {/* MODAL PARA EDITAR NOME DO CHAMADO (XERIFE E CHEFE) */}
+      {editingTicketTitle && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-300">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-[#1e3316] text-[#dfb642]">
+                  <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Editar Nome do Chamado</h3>
+                  <span className="text-xs text-slate-500 font-mono">{editingTicketTitle.code} · Gestão do Xerife / Chefe</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setEditingTicketTitle(null)} 
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmEditTitle} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Novo Título / Nome da Ocorrência:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newTitleInput}
+                  onChange={(e) => setNewTitleInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold focus:ring-2 focus:ring-[#27431e] bg-white text-slate-900"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingTicketTitle(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 font-bold hover:bg-slate-100 text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-[#1e3316] hover:bg-[#27431e] text-[#dfb642] font-black shadow-md border border-[#cba135]/50"
+                >
+                  Salvar Nome
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PARA INTERVENÇÃO GERAL DO XERIFE EM TODOS OS CHAMADOS */}
+      {showMassInterventionModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 space-y-4 shadow-2xl border-2 border-amber-500/60">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-amber-500 text-slate-950 font-black">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 leading-tight">Intervenção do Xerife da TI</h3>
+                  <span className="text-xs text-slate-500 font-mono">Despacho Simultâneo em Todos os Chamados Ativos</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowMassInterventionModal(false)} 
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmMassIntervention} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Mensagem de Intervenção Oficial:
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Digite o comunicado ou diretriz do Xerife para ser despachado em todos os chamados ativos..."
+                  value={massInterventionText}
+                  onChange={(e) => setMassInterventionText(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-[#27431e] bg-white text-slate-900"
+                />
+              </div>
+
+              <div>
+                <span className="text-[11px] font-bold text-slate-600 block mb-1.5">Modelos Rápidos do Xerife:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Xerife determina prioridade máxima de atendimento às seções operacionais nesta manhã.',
+                    'Corpo técnico em manutenção preventiva programada na rede do quartel.',
+                    'Aguardar chegada de insumos do almoxarifado central para finalização dos chamados de impressão.'
+                  ].map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMassInterventionText(m)}
+                      className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-[10px] text-left border border-amber-200"
+                    >
+                      + {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowMassInterventionModal(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 font-bold hover:bg-slate-100 text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black shadow-md border border-amber-700 flex items-center gap-1.5"
+                >
+                  <Zap className="w-4 h-4 text-yellow-300" />
+                  <span>Disparar Intervenção em Todos</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
@@ -1538,11 +1849,16 @@ interface KanbanTicketCardProps {
   ticket: Ticket;
   departments: Department[];
   technicians: Technician[];
+  canAssign: boolean;
+  canDelete: boolean;
+  canEditTitle: boolean;
+  canMoveStatus: boolean;
   onClick: () => void;
   onQuickAssign: (techId: string) => void;
   onQuickAdvance?: () => void;
   onQuickResolve: () => void;
   onDelete: () => void;
+  onEditTitle: () => void;
   onDragStart: (e: React.DragEvent) => void;
 }
 
@@ -1550,11 +1866,16 @@ const KanbanTicketCard: React.FC<KanbanTicketCardProps> = ({
   ticket,
   departments,
   technicians,
+  canAssign,
+  canDelete,
+  canEditTitle,
+  canMoveStatus,
   onClick,
   onQuickAssign,
   onQuickAdvance,
   onQuickResolve,
   onDelete,
+  onEditTitle,
   onDragStart,
 }) => {
   const dept = departments.find(d => d.id === ticket.departmentId);
@@ -1564,24 +1885,28 @@ const KanbanTicketCard: React.FC<KanbanTicketCardProps> = ({
 
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
+      draggable={canMoveStatus}
+      onDragStart={canMoveStatus ? onDragStart : undefined}
       onClick={onClick}
-      className={`group p-3.5 rounded-xl border bg-white shadow-xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing relative select-none ${
+      className={`group p-3.5 rounded-xl border bg-white shadow-xs hover:shadow-md transition-all relative select-none ${
+        canMoveStatus ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+      } ${
         isCritical ? 'border-red-500 ring-1 ring-red-500' : 'border-slate-200'
       }`}
     >
       {/* Topo do Card com Grip de Arrasto e Ações Rápidas */}
-      <div className="flex items-center justify-between gap-1.5 mb-1.5">
-        <div className="flex items-center gap-1">
-          <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600 transition-colors" />
-          <span className="font-mono text-xs font-black text-[#1e3316]">
+      <div className="flex items-center justify-between gap-1.5 mb-1.5 min-w-0">
+        <div className="flex items-center gap-1 min-w-0 shrink-0">
+          {canMoveStatus && (
+            <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-600 transition-colors shrink-0" />
+          )}
+          <span className="font-mono text-xs font-black text-[#1e3316] whitespace-nowrap tracking-tight">
             {ticket.code}
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase font-mono whitespace-nowrap shrink-0 ${
             ticket.priority === 'critica' ? 'bg-red-600 text-white' :
             ticket.priority === 'alta' ? 'bg-orange-500 text-white' :
             ticket.priority === 'media' ? 'bg-[#27431e] text-[#dfb642]' :
@@ -1590,37 +1915,39 @@ const KanbanTicketCard: React.FC<KanbanTicketCardProps> = ({
             {ticket.priority}
           </span>
 
-          {/* Botão Concluir Rápido (Check) */}
-          {!isResolved ? (
+          {/* Botão Concluir Rápido (Check) - só para quem pode mover status */}
+          {!isResolved && canMoveStatus ? (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onQuickResolve();
               }}
-              className="p-1 rounded-md text-emerald-700 hover:bg-emerald-100 border border-emerald-300/80 transition-colors"
+              className="p-1 rounded-md text-emerald-700 hover:bg-emerald-100 border border-emerald-300/80 transition-colors shrink-0"
               title="Concluir / Fechar Chamado"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
             </button>
-          ) : (
-            <span className="text-emerald-600" title="Chamado Concluído">
+          ) : isResolved ? (
+            <span className="text-emerald-600 shrink-0" title="Chamado Concluído">
               <CheckCircle2 className="w-3.5 h-3.5" />
             </span>
-          )}
+          ) : null}
 
-          {/* Botão Deletar Rápido (Lixeira) */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            className="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors"
-            title="Excluir Chamado"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          {/* Botão Deletar Rápido (Lixeira) - só para Xerife e Chefe */}
+          {canDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors shrink-0"
+              title="Excluir Chamado (Xerife / Chefe)"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -1633,10 +1960,25 @@ const KanbanTicketCard: React.FC<KanbanTicketCardProps> = ({
         <span className="truncate">{dept?.name}</span>
       </div>
 
-      {/* Título */}
-      <h4 className="font-bold text-sm text-slate-900 leading-snug line-clamp-2 mb-2">
-        {ticket.title}
-      </h4>
+      {/* Título com botão de Edição para Xerife/Chefe */}
+      <div className="flex items-start justify-between gap-1 mb-2">
+        <h4 className="font-bold text-sm text-slate-900 leading-snug line-clamp-2">
+          {ticket.title}
+        </h4>
+        {canEditTitle && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditTitle();
+            }}
+            className="p-1 rounded text-slate-400 hover:text-[#192b14] hover:bg-slate-100 shrink-0"
+            title="Editar Nome do Chamado (Xerife / Chefe)"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
 
       {/* Solicitante */}
       <div className="text-[11px] text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2 mb-2">
@@ -1645,40 +1987,47 @@ const KanbanTicketCard: React.FC<KanbanTicketCardProps> = ({
 
       {/* Alerta de Mensagens / Chat com o Solicitante */}
       {ticket.messages && ticket.messages.length > 0 && (
-        <div className={`mb-2 px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center justify-between border ${
+        <div className={`mb-2 px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-between border ${
           ticket.messages.some(m => m.sender === 'solicitante' && !m.readByTi)
             ? 'bg-amber-100 text-amber-900 border-amber-300 font-mono animate-pulse'
             : 'bg-slate-50 text-slate-700 border-slate-200'
         }`}>
-          <span className="flex items-center gap-1.5">
-            <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
-            <span>{ticket.messages.some(m => m.sender === 'solicitante' && !m.readByTi) ? 'Dúvida do Solicitante!' : 'Canal com Solicitante'}</span>
+          <span className="flex items-center gap-1.5 truncate min-w-0">
+            <MessageSquare className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span className="truncate">{ticket.messages.some(m => m.sender === 'solicitante' && !m.readByTi) ? 'Dúvida do Solicitante!' : 'Canal com Solicitante'}</span>
           </span>
-          <span className="font-mono font-bold">💬 {ticket.messages.length}</span>
+          <span className="font-mono font-bold shrink-0 ml-1">💬 {ticket.messages.length}</span>
         </div>
       )}
 
       {/* Atribuição direta de militar e avanço */}
-      <div className="flex items-center justify-between text-[11px] pt-1" onClick={(e) => e.stopPropagation()}>
-        <select
-          value={ticket.technicianId || ''}
-          onChange={(e) => onQuickAssign(e.target.value)}
-          className="text-[11px] font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 max-w-[140px] truncate"
-        >
-          <option value="">+ Atribuir Militar</option>
-          {technicians.map(tc => (
-            <option key={tc.id} value={tc.id}>{tc.name}</option>
-          ))}
-        </select>
+      <div className="flex items-center justify-between gap-2 text-[11px] pt-1" onClick={(e) => e.stopPropagation()}>
+        {canAssign ? (
+          <select
+            value={ticket.technicianId || ''}
+            onChange={(e) => onQuickAssign(e.target.value)}
+            className="text-[11px] font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5 flex-1 min-w-0 truncate focus:bg-white"
+          >
+            <option value="">+ Atribuir Militar</option>
+            {technicians.map(tc => (
+              <option key={tc.id} value={tc.id}>{tc.name}</option>
+            ))}
+          </select>
+        ) : (
+          <div className="text-[11px] font-bold text-slate-600 bg-slate-100 rounded-lg px-2 py-1.5 flex items-center gap-1 flex-1 min-w-0 truncate">
+            <Lock className="w-3 h-3 text-slate-400 shrink-0" />
+            <span className="truncate">{tech ? tech.name : 'Não Atribuído'}</span>
+          </div>
+        )}
 
-        {onQuickAdvance && ticket.status !== 'resolvido' && (
+        {onQuickAdvance && ticket.status !== 'resolvido' && canMoveStatus && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onQuickAdvance();
             }}
-            className="text-[10px] font-bold text-[#27431e] hover:text-[#192b14] bg-[#27431e]/10 px-2 py-1 rounded-lg"
+            className="text-[10px] font-bold text-[#27431e] hover:text-[#192b14] bg-[#27431e]/10 hover:bg-[#27431e]/20 px-2.5 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-colors"
           >
             Avançar →
           </button>
@@ -1687,3 +2036,4 @@ const KanbanTicketCard: React.FC<KanbanTicketCardProps> = ({
     </div>
   );
 };
+

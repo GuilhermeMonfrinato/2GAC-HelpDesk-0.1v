@@ -14,6 +14,8 @@ import {
   Flame
 } from 'lucide-react';
 import { Ticket, Department, Technician } from '../types';
+import { RegimentoDeodoroLogo } from './RegimentoDeodoroLogo';
+import malletBg from '../assets/mallet_bg.jpg';
 
 interface TVDashboardProps {
   tickets: Ticket[];
@@ -64,15 +66,21 @@ export const TVDashboard: React.FC<TVDashboardProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0d160a] text-slate-100 flex flex-col overflow-hidden font-sans select-none">
+    <div className="fixed inset-0 z-50 bg-[#0d160a] text-slate-100 flex flex-col overflow-hidden font-sans select-none relative">
+      {/* Marca d'água artística do General Mallet & Obuseiros de Artilharia */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-[0.08] bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${malletBg})` }}
+        aria-hidden="true"
+      />
       
       {/* Barra de Topo do Painel de TV */}
-      <div className="bg-[#152311] border-b-2 border-[#cba135]/50 px-6 py-3 flex items-center justify-between shadow-lg shrink-0">
+      <div className="bg-[#152311] border-b-2 border-[#cba135]/50 px-6 py-3 flex items-center justify-between shadow-lg shrink-0 relative z-10">
         
         {/* Identidade Militar da OM */}
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#1e3316] text-[#dfb642] flex items-center justify-center border-2 border-[#cba135] shadow-md shrink-0">
-            <Shield className="w-8 h-8" />
+          <div className="p-1 rounded-2xl bg-[#1e3316] border-2 border-[#cba135] shadow-md shrink-0">
+            <RegimentoDeodoroLogo size={48} />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -352,6 +360,20 @@ export const TVDashboard: React.FC<TVDashboardProps> = ({
         </div>
 
       </div>
+
+      {/* Rodapé Oficial do Painel de TV */}
+      <footer className="bg-[#152311] border-t border-[#cba135]/40 py-2 px-6 flex items-center justify-between text-xs text-emerald-200/70 shrink-0 relative z-10">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-[#dfb642]">2º GAC - REGIMENTO DEODORO</span>
+          <span>·</span>
+          <span>Seção de Informática & Telemática</span>
+          <span>·</span>
+          <span className="font-mono text-emerald-300">BRAÇO FORTE, MÃO AMIGA</span>
+        </div>
+        <div className="font-mono text-[11px] text-[#dfb642]/90">
+          desenvolvido com &lt;3 por Manfrinato | INFO/26
+        </div>
+      </footer>
 
     </div>
   );
