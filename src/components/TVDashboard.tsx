@@ -33,6 +33,22 @@ export const TVDashboard: React.FC<TVDashboardProps> = ({
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Travar scroll da página e escutar tecla ESC
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   // Relógio em tempo real
   useEffect(() => {
     const timer = setInterval(() => {
@@ -66,7 +82,7 @@ export const TVDashboard: React.FC<TVDashboardProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0d160a] text-slate-100 flex flex-col overflow-hidden font-sans select-none relative">
+    <div className="fixed inset-0 z-[9999] bg-[#0d160a] text-slate-100 flex flex-col overflow-hidden font-sans select-none">
       {/* Marca d'água artística do General Mallet & Obuseiros de Artilharia */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.08] bg-cover bg-center bg-no-repeat"

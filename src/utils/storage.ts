@@ -6,7 +6,8 @@ import {
   AccessibilitySettings, 
   NotebookLoan, 
   MilitaryUser, 
-  SystemAuditLog 
+  SystemAuditLog,
+  Mission
 } from '../types';
 import { 
   initialTickets, 
@@ -15,7 +16,8 @@ import {
   initialCategories, 
   initialNotebookLoans,
   initialMilitaryUsers,
-  initialAuditLogs
+  initialAuditLogs,
+  initialMissions
 } from '../data/mockData';
 
 const STORAGE_KEYS = {
@@ -28,6 +30,8 @@ const STORAGE_KEYS = {
   MILITARY_USERS: 'eb_military_users_v4',
   AUDIT_LOGS: 'eb_audit_logs_v4',
   CURRENT_USER: 'eb_current_user_v4',
+  MISSIONS: 'eb_missions_v4',
+  LAST_PAGE: 'eb_deodoro_last_page_v1',
 };
 
 export const loadTickets = (): Ticket[] => {
@@ -245,5 +249,117 @@ export const saveAccessibilitySettings = (settings: AccessibilitySettings) => {
   } catch (e) {
     console.error('Erro ao salvar a11y:', e);
   }
+};
+
+// ==================== MISSÕES MILITARES ====================
+export const loadMissions = (): Mission[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.MISSIONS);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEYS.MISSIONS, JSON.stringify(initialMissions));
+      return initialMissions;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return initialMissions;
+  }
+};
+
+export const saveMissions = (missions: Mission[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.MISSIONS, JSON.stringify(missions));
+    broadcastSyncEvent('MISSIONS_UPDATED');
+  } catch (e) {
+    console.error('Erro ao salvar missões:', e);
+  }
+};
+
+// ==================== ÚLTIMA PÁGINA / ROTA ACESSADA ====================
+export interface LastPageState {
+  isAdminRoute: boolean;
+  adminTab: 'it' | 'notebooks' | 'missions' | 'technicians';
+  isTvOpen?: boolean;
+}
+
+export const loadLastPage = (): LastPageState => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.LAST_PAGE);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        isAdminRoute: Boolean(parsed.isAdminRoute),
+        adminTab: ['it', 'notebooks', 'missions', 'technicians'].includes(parsed.adminTab) ? parsed.adminTab : 'it',
+        isTvOpen: Boolean(parsed.isTvOpen)
+      };
+    }
+  } catch {}
+  return {
+    isAdminRoute: false,
+    adminTab: 'it',
+    isTvOpen: false
+  };
+};
+
+export const saveLastPage = (page: LastPageState) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.LAST_PAGE, JSON.stringify(page));
+  } catch {}
+};
+
+// ==================== SINCRONIZAÇÃO EM TEMPO REAL MULTI-USUÁRIO ====================
+let syncChannel: BroadcastChannel | null = null;
+try {
+  if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+    syncChannel = new BroadcastChannel('eb_deodoro_realtime_sync');
+  }
+} catch {}
+
+export const broadcastSyncEvent = (eventType: string, payload?: any) => {
+  try {
+    if (syncChannel) {
+      syncChannel.postMessage({ type: eventType, payload, timestamp: Date.now() });
+    }
+    // Disparar também evento customizado local para o mesmo documento
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('eb_sync_event', { detail: { type: eventType, payload } }));
+    }
+  } catch {}
+};
+
+export const onRealtimeSync = (callback: (data: { type: string; payload?: any }) => void) => {
+  if (typeof window === 'undefined') return () => {};
+
+  const handleBroadcast = (event: MessageEvent) => {
+    if (event.data && event.data.type) {
+      callback(event.data);
+    }
+  };
+
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key && event.key.startsWith('eb_')) {
+      callback({ type: 'STORAGE_CHANGED', payload: event.key });
+    }
+  };
+
+  const handleCustom = (event: Event) => {
+    const ce = event as CustomEvent;
+    if (ce.detail) {
+      callback(ce.detail);
+    }
+  };
+
+  if (syncChannel) {
+    syncChannel.addEventListener('message', handleBroadcast);
+  }
+  window.addEventListener('storage', handleStorage);
+  window.addEventListener('eb_sync_event', handleCustom);
+
+  return () => {
+    if (syncChannel) {
+      syncChannel.removeEventListener('message', handleBroadcast);
+    }
+    window.removeEventListener('storage', handleStorage);
+    window.removeEventListener('eb_sync_event', handleCustom);
+  };
 };
 

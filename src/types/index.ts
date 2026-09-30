@@ -80,6 +80,8 @@ export interface MilitaryUser {
   warName: string; // Nome de Guerra (ex: Mendes, Silveira)
   role: UserRole;
   active: boolean;
+  deactivationReason?: string; // Motivo do desligamento/afastamento
+  deactivatedAt?: string; // Data do desligamento
   email?: string;
   specialty?: string;
   createdAt: string;
@@ -107,10 +109,51 @@ export interface SystemAuditLog {
     | 'USUARIO_CRIADO'
     | 'USUARIO_EDITADO'
     | 'USUARIO_SENHA_ALTERADA'
-    | 'LOGIN_SUCESSO';
+    | 'LOGIN_SUCESSO'
+    | 'CRIACAO_MISSAO'
+    | 'STATUS_MISSAO'
+    | 'EDICAO_MISSAO'
+    | 'EXCLUSAO_MISSAO'
+    | 'MILITAR_DESATIVADO'
+    | 'MILITAR_REATIVADO';
   summary: string;
   details?: string;
   targetRef?: string; // ex: "TICKET-1002" ou "DEODORO-NTB-014"
+}
+
+export type MissionPriority = 'urgente' | 'alta' | 'normal' | 'baixa';
+export type MissionStatus = 'pendente' | 'em_andamento' | 'concluida' | 'cancelada';
+
+export interface MissionChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface MissionNote {
+  id: string;
+  author: string;
+  authorRole: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface Mission {
+  id: string;
+  code: string; // Ex: "MISSAO-101"
+  title: string;
+  description: string;
+  priority: MissionPriority;
+  status: MissionStatus;
+  assignedTechnicianIds: string[];
+  createdBy: string;
+  createdByRole: string;
+  createdAt: string;
+  updatedAt: string;
+  deadline?: string;
+  completedAt?: string;
+  checklist?: MissionChecklistItem[];
+  notes?: MissionNote[];
 }
 
 export interface LoanHistoryItem {

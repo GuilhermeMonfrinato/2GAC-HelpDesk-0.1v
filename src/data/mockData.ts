@@ -1,4 +1,4 @@
-import { Department, Technician, Category, Ticket, NotebookLoan, MilitaryUser, SystemAuditLog } from '../types';
+import { Department, Technician, Category, Ticket, NotebookLoan, MilitaryUser, SystemAuditLog, Mission } from '../types';
 
 export const initialDepartments: Department[] = [
   {
@@ -578,6 +578,121 @@ export const initialAuditLogs: SystemAuditLog[] = [
     actionType: 'ATRIBUIR_TECNICO',
     summary: 'Atribuiu o chamado TICKET-1002 para o 3º Sgt Lucas Rocha.',
     targetRef: 'TICKET-1002',
+  },
+];
+
+export const initialMissions: Mission[] = [
+  {
+    id: 'mis-101',
+    code: 'MISSAO-101',
+    title: 'Passagem de Cabeamento Estruturado e Patch Cord no Pavilhão do Comando',
+    description: 'Instalação de conduítes, conectorização de cabos CAT6 blindados e teste de sinal na sala do Cmt e S Cmt do Regimento Deodoro.',
+    priority: 'urgente',
+    status: 'em_andamento',
+    assignedTechnicianIds: ['tech-3', 'tech-4'],
+    createdBy: '1º Ten Carlos Mendes',
+    createdByRole: 'CH-SECINFO',
+    createdAt: pastDays(1),
+    updatedAt: hoursAgo(2),
+    deadline: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
+    checklist: [
+      { id: 'c-1', text: 'Passagem dos cabos pelos conduítes externos', done: true },
+      { id: 'c-2', text: 'Conectorização e crimpagem dos conectores RJ45', done: true },
+      { id: 'c-3', text: 'Teste de atenuação com Fluke e certificação de porta', done: false },
+      { id: 'c-4', text: 'Fechamento da canaleta e recolhimento de resíduos', done: false },
+    ],
+    notes: [
+      {
+        id: 'n-1',
+        author: '1º Ten Carlos Mendes',
+        authorRole: 'CH-SECINFO',
+        text: 'Prioridade máxima devido à reunião de Estado-Maior amanhã às 08:30h.',
+        createdAt: pastDays(1),
+      },
+      {
+        id: 'n-2',
+        author: '3º Sgt Lucas Rocha',
+        authorRole: 'CH-TECNICOINFO',
+        text: 'Cabos passados no duto principal. Iniciando conectorização das tomadas fêmea.',
+        createdAt: hoursAgo(2),
+      },
+    ],
+  },
+  {
+    id: 'mis-102',
+    code: 'MISSAO-102',
+    title: 'Manutenção Preventiva e Limpeza no Switch Core do Regimento',
+    description: 'Abertura do rack central da Seção de TI, aspiração de poeira dos coolers, conferência das fontes redundantes e backup das VLANs.',
+    priority: 'alta',
+    status: 'pendente',
+    assignedTechnicianIds: ['tech-3'],
+    createdBy: '2º Sgt Beatriz Silveira',
+    createdByRole: 'CH-XERIFEINFO',
+    createdAt: hoursAgo(4),
+    updatedAt: hoursAgo(4),
+    deadline: new Date(now.getTime() + 48 * 3600 * 1000).toISOString(),
+    checklist: [
+      { id: 'c-5', text: 'Backup das configurações do switch core para pendrive seguro', done: false },
+      { id: 'c-6', text: 'Aspiração estática dos módulos de ventilação', done: false },
+      { id: 'c-7', text: 'Conferência dos LEDs de link de fibra óptica com o 4º Batalhão', done: false },
+    ],
+    notes: [
+      {
+        id: 'n-3',
+        author: '2º Sgt Beatriz Silveira',
+        authorRole: 'CH-XERIFEINFO',
+        text: 'Executar preferencialmente após o término do expediente às 17h para não interromper os sistemas da fiscalização.',
+        createdAt: hoursAgo(4),
+      },
+    ],
+  },
+  {
+    id: 'mis-103',
+    code: 'MISSAO-103',
+    title: 'Instalação do SIGA-EB e Certificados Digitais na Formação Sanitária (FSR)',
+    description: 'Configuração do navegador militar, leitoras de cartão criptográfico e drivers dos tokens nos 3 computadores do atendimento médico.',
+    priority: 'normal',
+    status: 'pendente',
+    assignedTechnicianIds: ['tech-5'],
+    createdBy: '1º Ten Carlos Mendes',
+    createdByRole: 'CH-SECINFO',
+    createdAt: pastDays(2),
+    updatedAt: pastDays(2),
+    deadline: new Date(now.getTime() + 72 * 3600 * 1000).toISOString(),
+    checklist: [
+      { id: 'c-8', text: 'Instalação da cadeia de certificados da ICP-Brasil e EB', done: false },
+      { id: 'c-9', text: 'Configuração da extensão de assinatura digital', done: false },
+      { id: 'c-10', text: 'Teste de autenticação com cartão funcional da Ten Med Daniele', done: false },
+    ],
+  },
+  {
+    id: 'mis-104',
+    code: 'MISSAO-104',
+    title: 'Revisão e Teste de Autonomia nos Nobreaks da 3ª Seção (Operações)',
+    description: 'Conferência do banco de baterias de 12V dos 2 nobreaks senoidais da sala de cartas e tiro do Regimento.',
+    priority: 'normal',
+    status: 'concluida',
+    assignedTechnicianIds: ['tech-3', 'tech-4'],
+    createdBy: '1º Ten Carlos Mendes',
+    createdByRole: 'CH-SECINFO',
+    createdAt: pastDays(5),
+    updatedAt: pastDays(3),
+    completedAt: pastDays(3),
+    deadline: pastDays(3),
+    checklist: [
+      { id: 'c-11', text: 'Medição de voltagem individual com multímetro', done: true },
+      { id: 'c-12', text: 'Simulação de queda de rede por 20 minutos', done: true },
+      { id: 'c-13', text: 'Relatório assinado pelo Maj Nogueira da 3ª Seção', done: true },
+    ],
+    notes: [
+      {
+        id: 'n-4',
+        author: '3º Sgt Lucas Rocha',
+        authorRole: 'CH-TECNICOINFO',
+        text: 'Nobreaks testados com 42 minutos de autonomia sob carga plena. 100% operacionais.',
+        createdAt: pastDays(3),
+      },
+    ],
   },
 ];
 

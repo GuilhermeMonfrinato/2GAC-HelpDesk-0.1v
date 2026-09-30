@@ -125,6 +125,11 @@ export const TechniciansManager: React.FC<TechniciansManagerProps> = ({
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [showPasswordText, setShowPasswordText] = useState(false);
 
+  // Estados do Modal de Desligamento / Afastamento de Militar
+  const [deactivatingUser, setDeactivatingUser] = useState<MilitaryUser | null>(null);
+  const [deactivationReasonCategory, setDeactivationReasonCategory] = useState<string>('Transferência de OM');
+  const [deactivationNotes, setDeactivationNotes] = useState<string>('');
+
   // Estados de Filtro de Logs de Auditoria
   const [logSearch, setLogSearch] = useState('');
   const [logFilterAction, setLogFilterAction] = useState('all');
@@ -237,15 +242,82 @@ export const TechniciansManager: React.FC<TechniciansManagerProps> = ({
       return;
     }
 
-    const updated = militaryUsers.map(u => u.id === user.id ? { ...u, active: !u.active } : u);
+    if (user.active) {
+      // Abrir modal para registrar o motivo do desligamento/afastamento
+      setDeactivatingUser(user);
+      setDeactivationReasonCategory('Transferência de OM');
+      setDeactivationNotes('');
+    } else {
+      // Reativação direta
+      if (window.confirm(`Deseja reativar o militar ${user.name} (${user.username}) para o serviço ativo na Seção de TI?`)) {
+        handleReactivateUser(user);
+      }
+    }
+  };
+
+  const handleConfirmDeactivation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deactivatingUser) return;
+
+    const fullReason = deactivationNotes.trim() 
+      ? `${deactivationReasonCategory}: ${deactivationNotes.trim()}`
+      : deactivationReasonCategory;
+
+    const deactivatedAt = new Date().toISOString();
+
+    const updated = militaryUsers.map(u => u.id === deactivatingUser.id ? { 
+      ...u, 
+      active: false,
+      deactivationReason: fullReason,
+      deactivatedAt: deactivatedAt
+    } : u);
+
     onUpdateMilitaryUsers(updated);
+
+    // Sincronizar na bancada de técnicos também
+    onUpdateTechnicians(
+      technicians.map(t => t.id === deactivatingUser.id || t.email === deactivatingUser.email 
+        ? { ...t, active: false } 
+        : t
+      )
+    );
 
     onAddAuditLog({
       militaryName: currentUser?.name || 'Administrador',
       militaryLogin: currentUser?.username || 'admin',
       role: currentUser?.role || 'CH-SECINFO',
-      actionType: 'USUARIO_EDITADO',
-      summary: `${!user.active ? 'Ativou' : 'Desativou'} o acesso do militar ${user.name} (${user.username})`,
+      actionType: 'MILITAR_DESATIVADO',
+      summary: `Desativou/afastou o militar ${deactivatingUser.name} (${deactivatingUser.username})`,
+      details: `Motivo: ${fullReason}`,
+      targetRef: deactivatingUser.username,
+    });
+
+    setDeactivatingUser(null);
+  };
+
+  const handleReactivateUser = (user: MilitaryUser) => {
+    const updated = militaryUsers.map(u => u.id === user.id ? { 
+      ...u, 
+      active: true,
+      deactivationReason: undefined,
+      deactivatedAt: undefined
+    } : u);
+
+    onUpdateMilitaryUsers(updated);
+
+    onUpdateTechnicians(
+      technicians.map(t => t.id === user.id || t.email === user.email 
+        ? { ...t, active: true } 
+        : t
+      )
+    );
+
+    onAddAuditLog({
+      militaryName: currentUser?.name || 'Administrador',
+      militaryLogin: currentUser?.username || 'admin',
+      role: currentUser?.role || 'CH-SECINFO',
+      actionType: 'MILITAR_REATIVADO',
+      summary: `Reativou o militar ${user.name} (${user.username}) para o serviço ativo`,
       targetRef: user.username,
     });
   };
@@ -500,19 +572,26 @@ export const TechniciansManager: React.FC<TechniciansManagerProps> = ({
                   </div>
 
                   {/* Rodapé do Card: Trocar de Sessão (Atalho para Testar Permissão) */}
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className={`px-2 py-0.5 rounded font-mono font-bold text-[11px] ${
-                      user.active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
-                    }`}>
-                      {user.active ? '● Acesso Habilitado' : '○ Acesso Bloqueado'}
-                    </span>
+                  <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div>
+                      <span className={`px-2 py-0.5 rounded font-mono font-bold text-[11px] inline-block ${
+                        user.active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800 border border-red-200'
+                      }`}>
+                        {user.active ? '● Efetivo Ativo na TI' : '○ Militar Afastado / Desligado'}
+                      </span>
+                      {!user.active && user.deactivationReason && (
+                        <div className="mt-1 text-[11px] text-red-700 bg-red-50 px-2 py-1 rounded-lg border border-red-200">
+                          <strong>Motivo:</strong> {user.deactivationReason}
+                        </div>
+                      )}
+                    </div>
 
                     {onSwitchUser && (
                       <button
                         type="button"
                         onClick={() => onSwitchUser(user)}
                         disabled={isLogged || !user.active}
-                        className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ${
+                        className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all self-start sm:self-auto ${
                           isLogged 
                             ? 'bg-slate-100 text-slate-400 cursor-default' 
                             : 'bg-[#1e3316] text-[#dfb642] hover:bg-[#27431e] shadow-2xs'
@@ -1011,6 +1090,91 @@ export const TechniciansManager: React.FC<TechniciansManagerProps> = ({
                   className="px-5 py-2 rounded-xl bg-[#1e3316] text-[#dfb642] font-black hover:bg-[#27431e]"
                 >
                   Salvar Nova Senha
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: REGISTRO DE MOTIVO DE DESLIGAMENTO / AFASTAMENTO DE MILITAR */}
+      {deactivatingUser && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-red-500/40">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-red-100 text-red-700">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900">
+                    Afastamento / Desligamento de Militar
+                  </h3>
+                  <span className="text-xs text-slate-500">
+                    {deactivatingUser.name} ({deactivatingUser.username})
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeactivatingUser(null)}
+                className="p-1 rounded text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmDeactivation} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Motivo Principal do Afastamento *
+                </label>
+                <select
+                  value={deactivationReasonCategory}
+                  onChange={(e) => setDeactivationReasonCategory(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold bg-white focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="Transferência de OM">Transferência de OM / Guarnição</option>
+                  <option value="Missão Externa / Operação">Missão Externa / Operação Militar</option>
+                  <option value="Licença Especial / Médica">Licença Especial / Licença Médica (FSR)</option>
+                  <option value="Baixa do Serviço Ativo">Baixa do Serviço Ativo / Reserva</option>
+                  <option value="Férias Regulamentares">Férias Regulamentares</option>
+                  <option value="Designação Externa">Designação para outra função interna</option>
+                  <option value="Desligamento Administrativo">Desligamento Administrativo da TI</option>
+                  <option value="Outro Motivo">Outro Motivo</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Observações / Justificativa Militar (Opcional)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Ex: Publicado no BI nº 142 de 24/09; Transferido para a 2ª Bia O; Período de 30 dias..."
+                  value={deactivationNotes}
+                  onChange={(e) => setDeactivationNotes(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] leading-relaxed">
+                <strong>Atenção:</strong> Ao desativar o militar, o acesso dele ao painel administrativo será bloqueado e o motivo ficará registrado nos logs de auditoria e na listagem da seção.
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setDeactivatingUser(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 shadow-md cursor-pointer"
+                >
+                  Confirmar Afastamento
                 </button>
               </div>
             </form>
