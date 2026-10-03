@@ -19,7 +19,9 @@ import {
   History,
   User,
   Info,
-  FileText
+  FileText,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { NotebookLoan, Department, AccessibilitySettings, MilitaryUser, LoanHistoryItem, LoanMessage } from '../types';
 
@@ -80,6 +82,7 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
   const [filterStatus, setFilterStatus] = useState<'all' | 'cautelado' | 'devolvido' | 'atrasado'>('all');
   const [filterDept, setFilterDept] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
 
   // Modal Nova Cautela
   const [showNewModal, setShowNewModal] = useState(false);
@@ -321,6 +324,164 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
     );
   };
 
+  const renderKanbanCard = (loan: NotebookLoan) => {
+    const dept = departments.find(d => d.id === loan.departmentId);
+    const isOverdue = isLoanOverdue(loan);
+    const isReturned = loan.status === 'devolvido';
+    const isProrrogado = Boolean(loan.extensionCount && loan.extensionCount > 0);
+
+    return (
+      <div
+        key={loan.id}
+        className={`p-3.5 rounded-xl border bg-white shadow-xs hover:shadow-md transition-all space-y-2.5 ${
+          isOverdue 
+            ? 'border-red-400 ring-1 ring-red-400 bg-red-50/20' 
+            : isReturned
+              ? 'border-slate-200 opacity-80 bg-slate-50/50'
+              : isProrrogado
+                ? 'border-amber-300 ring-1 ring-amber-200'
+                : 'border-slate-200'
+        }`}
+      >
+        {/* Topo do Card com Patrimônio e Badges */}
+        <div className="flex items-center justify-between gap-1.5 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className={`p-1.5 rounded-lg shrink-0 ${
+              isReturned ? 'bg-slate-100 text-slate-500' : isOverdue ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-800'
+            }`}>
+              <Laptop className="w-4 h-4" />
+            </div>
+            <span className="font-mono text-xs font-black text-slate-900 truncate">
+              {loan.notebookNumber}
+            </span>
+          </div>
+
+          <div className="shrink-0">
+            {isReturned ? (
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                Devolvido
+              </span>
+            ) : isOverdue ? (
+              <span className="px-2 py-0.5 rounded text-[10px] font-black bg-red-600 text-white uppercase animate-pulse">
+                Atrasado
+              </span>
+            ) : isProrrogado ? (
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-white uppercase font-mono">
+                Prorrogado {loan.extensionCount}x
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                No Prazo
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Modelo do Notebook */}
+        <div className="text-xs font-bold text-slate-800 line-clamp-1">
+          {loan.notebookName}
+        </div>
+
+        {/* Seção e Militar */}
+        <div className="space-y-1 text-xs">
+          <div className="flex items-center gap-1.5 text-slate-700">
+            <span 
+              className="w-2 h-2 rounded-full shrink-0" 
+              style={{ backgroundColor: dept?.color || '#27431e' }} 
+            />
+            <span className="font-bold truncate">{dept?.name || 'Seção da OM'}</span>
+          </div>
+          <div className="text-[11px] text-slate-600 truncate pl-3.5">
+            Militar: <strong>{loan.borrowerName}</strong>
+          </div>
+        </div>
+
+        {/* Datas da Cautela */}
+        <div className={`p-2 rounded-lg text-[11px] ${
+          isOverdue ? 'bg-red-100/80 text-red-900 border border-red-200' : 'bg-slate-50 text-slate-600 border border-slate-100'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span>Devolução:</span>
+            <span className="font-mono font-bold">
+              {new Date(loan.expectedReturnDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+            </span>
+          </div>
+          {isProrrogado && loan.lastExtensionReason && (
+            <div className="text-[10px] text-amber-800 font-medium truncate mt-0.5">
+              Justificativa: "{loan.lastExtensionReason}"
+            </div>
+          )}
+        </div>
+
+        {/* Ações Rápidas do Card */}
+        <div className="flex items-center justify-between gap-1 pt-1 border-t border-slate-100 text-xs">
+          {/* Botão de Histórico e Chat */}
+          <button
+            onClick={() => {
+              setActiveLoanForChat(loan);
+              setLoanChatInput('');
+            }}
+            className="flex-1 py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+            title="Abrir histórico e chat da cautela"
+          >
+            <MessageSquare className="w-3 h-3 text-emerald-700" />
+            <span>Chat {loan.messages && loan.messages.length > 0 ? `(${loan.messages.length})` : ''}</span>
+          </button>
+
+          {/* Se ativo: Botão Prorrogar */}
+          {!isReturned && (
+            <button
+              onClick={() => {
+                setActiveLoanForExtension(loan);
+                const currExp = new Date(loan.expectedReturnDate + 'T00:00:00');
+                currExp.setDate(currExp.getDate() + 7);
+                setNewExtensionDate(currExp.toISOString().split('T')[0]);
+                setExtensionJustification('');
+                setExtensionError('');
+              }}
+              className="py-1.5 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 font-bold text-[10px] flex items-center gap-1 border border-amber-300 transition-colors cursor-pointer"
+              title="Prorrogar prazo de devolução"
+            >
+              <CalendarPlus className="w-3 h-3 text-amber-700" />
+              <span>Prorrogar</span>
+            </button>
+          )}
+
+          {/* Se ativo: Botão Descautelar */}
+          {!isReturned && (
+            <button
+              onClick={() => {
+                setActiveLoanForReturn(loan);
+                setReturnDate(new Date().toISOString().split('T')[0]);
+                setHasIssues(false);
+                setSelectedIssues([]);
+                setReturnNotes('');
+                setReturnPassword('');
+                setReturnAuthError('');
+              }}
+              className="py-1.5 px-2 rounded-lg bg-[#27431e] hover:bg-[#1e3316] text-[#dfb642] font-bold text-[10px] flex items-center gap-1 transition-colors cursor-pointer"
+              title="Receber devolução do notebook"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Devolver</span>
+            </button>
+          )}
+
+          {/* Se devolvido: laudo de avarias */}
+          {isReturned && (
+            <div className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+              {loan.hasIssuesOnReturn ? (
+                <span className="text-red-600">⚠️ Com avarias</span>
+              ) : (
+                <span className="text-emerald-700">✅ Íntegro</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 space-y-6">
       
@@ -452,6 +613,34 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
               Descautelados ({returnedCount})
             </button>
           </div>
+
+          {/* Alternador de Modo de Visualização: Quadro Kanban vs Lista */}
+          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200 shrink-0 self-start md:self-auto">
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                viewMode === 'kanban' 
+                  ? 'bg-[#1e3316] text-[#dfb642] shadow-xs' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Visualização em Quadro Kanban por status"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Quadro Kanban</span>
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                viewMode === 'table' 
+                  ? 'bg-[#1e3316] text-[#dfb642] shadow-xs' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Visualização em Tabela detalhada"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>Lista / Tabela</span>
+            </button>
+          </div>
         </div>
 
         {/* Filtro por Seção */}
@@ -480,7 +669,111 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
         </div>
       </div>
 
-      {/* Lista de Cautelas */}
+      {/* MODO 1: QUADRO KANBAN DE CAUTELAS DE NOTEBOOKS */}
+      {viewMode === 'kanban' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+          
+          {/* Coluna 1: Em Uso / No Prazo */}
+          <div className="p-3.5 rounded-2xl border bg-slate-100/70 border-slate-200 space-y-3 min-h-[450px]">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <span className="font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                1. Em Uso (No Prazo)
+              </span>
+              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-white text-emerald-800 border border-slate-200">
+                {filteredLoans.filter(l => l.status === 'cautelado' && !isLoanOverdue(l) && (!l.extensionCount || l.extensionCount === 0)).length}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {filteredLoans
+                .filter(l => l.status === 'cautelado' && !isLoanOverdue(l) && (!l.extensionCount || l.extensionCount === 0))
+                .map((loan) => renderKanbanCard(loan))}
+              {filteredLoans.filter(l => l.status === 'cautelado' && !isLoanOverdue(l) && (!l.extensionCount || l.extensionCount === 0)).length === 0 && (
+                <div className="p-6 text-center text-xs text-slate-400 bg-white/50 rounded-xl border border-dashed border-slate-200">
+                  Nenhum notebook nesta etapa.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Coluna 2: Prazo Prorrogado */}
+          <div className="p-3.5 rounded-2xl border bg-amber-50/40 border-amber-200/80 space-y-3 min-h-[450px]">
+            <div className="flex items-center justify-between pb-2 border-b border-amber-200">
+              <span className="font-bold text-xs uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                2. Prazo Prorrogado
+              </span>
+              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-white text-amber-800 border border-amber-200">
+                {filteredLoans.filter(l => l.status === 'cautelado' && !isLoanOverdue(l) && (l.extensionCount && l.extensionCount > 0)).length}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {filteredLoans
+                .filter(l => l.status === 'cautelado' && !isLoanOverdue(l) && (l.extensionCount && l.extensionCount > 0))
+                .map((loan) => renderKanbanCard(loan))}
+              {filteredLoans.filter(l => l.status === 'cautelado' && !isLoanOverdue(l) && (l.extensionCount && l.extensionCount > 0)).length === 0 && (
+                <div className="p-6 text-center text-xs text-slate-400 bg-white/50 rounded-xl border border-dashed border-slate-200">
+                  Nenhuma prorrogação ativa.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Coluna 3: Em Atraso (Vencidos) */}
+          <div className="p-3.5 rounded-2xl border bg-red-50/50 border-red-200 space-y-3 min-h-[450px]">
+            <div className="flex items-center justify-between pb-2 border-b border-red-200">
+              <span className="font-bold text-xs uppercase tracking-wider text-red-700 flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping"></span>
+                3. Em Atraso / Vencidos
+              </span>
+              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-red-600 text-white shadow-xs">
+                {filteredLoans.filter(l => l.status === 'cautelado' && isLoanOverdue(l)).length}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {filteredLoans
+                .filter(l => l.status === 'cautelado' && isLoanOverdue(l))
+                .map((loan) => renderKanbanCard(loan))}
+              {filteredLoans.filter(l => l.status === 'cautelado' && isLoanOverdue(l)).length === 0 && (
+                <div className="p-6 text-center text-xs text-emerald-600 bg-emerald-50/50 rounded-xl border border-dashed border-emerald-200 font-medium">
+                  Excelente! Nenhuma devolução em atraso.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Coluna 4: Devolvidos / No Depósito */}
+          <div className="p-3.5 rounded-2xl border bg-slate-100/70 border-slate-200 space-y-3 min-h-[450px]">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <span className="font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+                4. Devolvidos / Depósito
+              </span>
+              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-white text-slate-700 border border-slate-200">
+                {filteredLoans.filter(l => l.status === 'devolvido').length}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {filteredLoans
+                .filter(l => l.status === 'devolvido')
+                .map((loan) => renderKanbanCard(loan))}
+              {filteredLoans.filter(l => l.status === 'devolvido').length === 0 && (
+                <div className="p-6 text-center text-xs text-slate-400 bg-white/50 rounded-xl border border-dashed border-slate-200">
+                  Nenhum registro devolvido no filtro.
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* MODO 2: LISTA / TABELA DETALHADA DE CAUTELAS */}
+      {viewMode === 'table' && (
       <div className="space-y-4">
         {filteredLoans.length === 0 ? (
           <div className="p-12 text-center bg-white border border-slate-200 rounded-2xl text-slate-500 space-y-2">
@@ -735,6 +1028,7 @@ export const NotebookLoans: React.FC<NotebookLoansProps> = ({
           })
         )}
       </div>
+      )}
 
       {/* MODAL: CADASTRAR NOVA CAUTELA */}
       {showNewModal && (

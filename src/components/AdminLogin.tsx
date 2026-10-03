@@ -229,26 +229,15 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
         </div>
 
         {/* Links do rodapé do card de login */}
-        <div className="mt-6 pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-center">
+        <div className="mt-6 pt-4 border-t border-slate-200 flex items-center justify-center text-center">
           <button
             type="button"
             onClick={onGoBackToPortal}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Central do Solicitante</span>
+            <span>← Voltar para Central do Solicitante</span>
           </button>
-
-          {onOpenIntranet && (
-            <button
-              type="button"
-              onClick={onOpenIntranet}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1e3316] hover:underline transition-colors"
-            >
-              <Globe className="w-3.5 h-3.5 text-[#27431e]" />
-              <span>Abas da Intranet (2º GAC)</span>
-            </button>
-          )}
         </div>
 
         {/* Crédito do Desenvolvedor */}

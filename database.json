@@ -1,0 +1,846 @@
+{
+  "departments": [
+    {
+      "id": "dept-cmt",
+      "name": "Comando & Subcomando (Cmt / S Cmt)",
+      "code": "CMDO",
+      "color": "#1e3316",
+      "iconName": "Shield",
+      "managerName": "Cel Silva Ramos",
+      "description": "Gabinete do Comando do Regimento Deodoro e Estado-Maior."
+    },
+    {
+      "id": "dept-s1",
+      "name": "1ª Seção - Pessoal (SPes / S1)",
+      "code": "1ª SEÇÃO",
+      "color": "#2d4a22",
+      "iconName": "Users",
+      "managerName": "Cap Oliveira",
+      "description": "Efetivo do Regimento, alterações, férias e Boletim Interno (BI)."
+    },
+    {
+      "id": "dept-s2",
+      "name": "2ª Seção - Inteligência (SInt / S2)",
+      "code": "2ª SEÇÃO",
+      "color": "#36582a",
+      "iconName": "Lock",
+      "managerName": "Cap Ferreira",
+      "description": "Segurança orgânica e credenciamento militar."
+    },
+    {
+      "id": "dept-s3",
+      "name": "3ª Seção - Operações & Instrução (SOp / S3)",
+      "code": "3ª SEÇÃO",
+      "color": "#426c34",
+      "iconName": "Crosshair",
+      "managerName": "Maj Nogueira",
+      "description": "Instruções de Artilharia, tiros de obuseiros e manobras do Regimento."
+    },
+    {
+      "id": "dept-s4",
+      "name": "4ª Seção - Logística & Suprimento (SLog / S4)",
+      "code": "4ª SEÇÃO",
+      "color": "#855e1a",
+      "iconName": "Truck",
+      "managerName": "Cap Mendes Braga",
+      "description": "Manutenção de obuseiros, munição, viaturas e suprimento do quartel."
+    },
+    {
+      "id": "dept-salc",
+      "name": "SALC (Licitações & Contratos)",
+      "code": "SALC",
+      "color": "#1a496b",
+      "iconName": "FileCheck",
+      "managerName": "1º Ten Albuquerque",
+      "description": "Aquisições, pregões eletrônicos e compras do Regimento."
+    },
+    {
+      "id": "dept-fisc",
+      "name": "Fiscalização Administrativa & Pagadoria",
+      "code": "FISC ADM",
+      "color": "#713f12",
+      "iconName": "DollarSign",
+      "managerName": "Cap Vasconcelos",
+      "description": "Execução orçamentária e pagamento do efetivo do 2º GAC."
+    },
+    {
+      "id": "dept-bia",
+      "name": "Baterias de Obuses (1ª Bia O / 2ª Bia O / Bia Cmdo)",
+      "code": "BIAS O",
+      "color": "#5b21b6",
+      "iconName": "Crosshair",
+      "managerName": "Cap Dantas",
+      "description": "Linhas de fogo, observação e comando das baterias de tiro."
+    },
+    {
+      "id": "dept-sau",
+      "name": "Formação Sanitária de Regimento (FSR)",
+      "code": "FSR",
+      "color": "#991b1b",
+      "iconName": "HeartPulse",
+      "managerName": "1º Ten Med Daniele",
+      "description": "Atendimento de saúde e perícias médicas da guarnição."
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat-printer",
+      "name": "Impressora / Impressão de Boletim",
+      "icon": "Printer",
+      "defaultPriority": "media",
+      "simpleInstructions": "Papel preso, toner fraco, falha ao imprimir documentos oficiais ou Boletim Interno."
+    },
+    {
+      "id": "cat-network",
+      "name": "Conexão de Rede / Internet do Quartel",
+      "icon": "Wifi",
+      "defaultPriority": "alta",
+      "simpleInstructions": "Sem conexão de rede nos computadores do quartel, sites não abrem ou cabo desconectado."
+    },
+    {
+      "id": "cat-systems",
+      "name": "Sistemas Militares (SISBOL / Comprasnet / SIGELOG)",
+      "icon": "Layers",
+      "defaultPriority": "alta",
+      "simpleInstructions": "Falha ao acessar o sistema de ordens do quartel, assinatura digital ou token."
+    },
+    {
+      "id": "cat-computer",
+      "name": "Computador Travando / Não Liga",
+      "icon": "Monitor",
+      "defaultPriority": "alta",
+      "simpleInstructions": "Tela preta, travamento no meio do serviço, computador não liga ou ruído anormal."
+    },
+    {
+      "id": "cat-password",
+      "name": "Esqueci a Senha / Usuário Bloqueado",
+      "icon": "KeyRound",
+      "defaultPriority": "media",
+      "simpleInstructions": "Bloqueio na senha do computador ou necessidade de redefinição de acesso."
+    },
+    {
+      "id": "cat-email",
+      "name": "Correio Eletrônico (Webmail do Quartel)",
+      "icon": "Mail",
+      "defaultPriority": "media",
+      "simpleInstructions": "Falha no envio ou recebimento de e-mails oficiais da OM."
+    },
+    {
+      "id": "cat-other",
+      "name": "Outro Problema / Solicitação Diversa",
+      "icon": "HelpCircle",
+      "defaultPriority": "baixa",
+      "simpleInstructions": "Instalação de programa homologado, teclado, mouse ou dúvida geral."
+    }
+  ],
+  "military_users": [
+    {
+      "id": "usr-1",
+      "username": "secinfo",
+      "password": "123",
+      "name": "1º Ten Carlos Mendes",
+      "rank": "1º Ten",
+      "warName": "Carlos Mendes",
+      "role": "CH-SECINFO",
+      "active": true,
+      "email": "carlos.mendes@eb.mil.br",
+      "specialty": "Chefe da Seção de Informática & Telemática (Acesso Total)",
+      "createdAt": "2026-10-03T16:36:29.348Z"
+    },
+    {
+      "id": "usr-2",
+      "username": "xerife",
+      "password": "123",
+      "name": "2º Sgt Beatriz Silveira",
+      "rank": "2º Sgt",
+      "warName": "Beatriz Silveira",
+      "role": "CH-XERIFEINFO",
+      "active": true,
+      "email": "beatriz.silveira@eb.mil.br",
+      "specialty": "Xerife do Corpo Técnico (Gerência de Fila e Técnicos)",
+      "createdAt": "2026-10-03T16:36:29.348Z"
+    },
+    {
+      "id": "usr-3",
+      "username": "tecnico",
+      "password": "123",
+      "name": "3º Sgt Lucas Rocha",
+      "rank": "3º Sgt",
+      "warName": "Lucas Rocha",
+      "role": "CH-TECNICOINFO",
+      "active": true,
+      "email": "lucas.rocha@eb.mil.br",
+      "specialty": "Mecânico de TI / Atendimento e Solução",
+      "createdAt": "2026-10-03T16:36:29.348Z"
+    },
+    {
+      "id": "usr-4",
+      "username": "tvinfo",
+      "password": "123",
+      "name": "Painel TV da Seção",
+      "rank": "TI",
+      "warName": "Telão Sala TI",
+      "role": "CH-TVINFO",
+      "active": true,
+      "email": "tv.informatica@eb.mil.br",
+      "specialty": "Exibição de Status e Chamados (Sem Interação)",
+      "createdAt": "2026-10-03T16:36:29.348Z"
+    }
+  ],
+  "technicians": [
+    {
+      "id": "tech-1",
+      "name": "1º Ten Carlos Mendes",
+      "role": "Chefe da Seção de Informática",
+      "email": "carlos.mendes@eb.mil.br",
+      "avatar": "TC",
+      "active": true,
+      "specialty": "Coordenação e Servidores do Regimento"
+    },
+    {
+      "id": "tech-2",
+      "name": "2º Sgt Beatriz Silveira",
+      "role": "Auxiliar da Seção de Informática",
+      "email": "beatriz.silveira@eb.mil.br",
+      "avatar": "SB",
+      "active": true,
+      "specialty": "Controle de Cautelas e Sistemas Operacionais"
+    },
+    {
+      "id": "tech-3",
+      "name": "3º Sgt Lucas Rocha",
+      "role": "Mecânico de Informática / N1",
+      "email": "lucas.rocha@eb.mil.br",
+      "avatar": "SR",
+      "active": true,
+      "specialty": "Manutenção de Microcomputadores e Impressoras"
+    },
+    {
+      "id": "tech-4",
+      "name": "Cb Marcos Alencar",
+      "role": "Operador de Suporte",
+      "email": "alencar.marcos@eb.mil.br",
+      "avatar": "CA",
+      "active": true,
+      "specialty": "Cabeamento e Periféricos no Quartel"
+    }
+  ],
+  "tickets": [
+    {
+      "id": "t-1001",
+      "code": "TICKET-1001",
+      "title": "Impressora da 1ª Seção travando durante confecção do Boletim Interno",
+      "description": "A impressora laser da SPes travou no meio da impressão das alterações do efetivo. Necessário reparo urgente para publicação do BI.",
+      "category": "Impressora / Impressão de Boletim",
+      "priority": "critica",
+      "status": "em_atendimento",
+      "requesterName": "Cap Oliveira (Ch 1ª Seç)",
+      "departmentId": "dept-s1",
+      "technicianId": "tech-3",
+      "createdAt": "2026-10-03T15:36:29.347Z",
+      "updatedAt": "2026-10-03T16:06:29.347Z",
+      "resolvedAt": null,
+      "slaLimitHours": 1,
+      "history": [
+        {
+          "id": "h-1",
+          "date": "2026-10-03T15:36:29.347Z",
+          "author": "Cap Oliveira",
+          "action": "Chamado Aberto",
+          "comment": "Prioridade Crítica selecionada para fechamento do BI."
+        },
+        {
+          "id": "h-2",
+          "date": "2026-10-03T16:06:29.347Z",
+          "author": "3º Sgt Lucas Rocha",
+          "action": "Em Atendimento",
+          "comment": "Militar deslocado para a 1ª Seção do Regimento Deodoro."
+        }
+      ],
+      "messages": [
+        {
+          "id": "m-1",
+          "sender": "solicitante",
+          "senderName": "Cap Oliveira (Ch 1ª Seç)",
+          "content": "Tem previsão de término? O Boletim Interno precisa subir para conferência do Comandante até as 16h.",
+          "createdAt": "2026-10-03T15:48:29.347Z",
+          "readByTi": true
+        },
+        {
+          "id": "m-2",
+          "sender": "ti",
+          "senderName": "3º Sgt Lucas Rocha (TI)",
+          "content": "Positivo, Capitão! O rolete já foi desobstruído na bancada. Estamos efetuando a página de teste e entregamos em 10 minutos.",
+          "createdAt": "2026-10-03T16:12:29.347Z",
+          "readByTi": true
+        }
+      ]
+    },
+    {
+      "id": "t-1002",
+      "code": "TICKET-1002",
+      "title": "Ponto de rede inoperante na SALC do Regimento",
+      "description": "Computador responsável pelos pregões da unidade está sem sinal de conexão desde a primeira hora do expediente.",
+      "category": "Conexão de Rede / Internet do Quartel",
+      "priority": "alta",
+      "status": "aberto",
+      "requesterName": "1º Ten Albuquerque (SALC)",
+      "departmentId": "dept-salc",
+      "technicianId": null,
+      "createdAt": "2026-10-03T14:36:29.347Z",
+      "updatedAt": "2026-10-03T14:36:29.347Z",
+      "resolvedAt": null,
+      "slaLimitHours": 2,
+      "history": [
+        {
+          "id": "h-3",
+          "date": "2026-10-03T14:36:29.347Z",
+          "author": "1º Ten Albuquerque",
+          "action": "Chamado Aberto"
+        }
+      ],
+      "messages": [
+        {
+          "id": "m-3",
+          "sender": "solicitante",
+          "senderName": "1º Ten Albuquerque (SALC)",
+          "content": "Como está o andamento? O pregão eletrônico da OM abre em breve, tem previsão?",
+          "createdAt": "2026-10-03T16:24:29.347Z",
+          "readByTi": false
+        }
+      ]
+    },
+    {
+      "id": "t-1003",
+      "code": "TICKET-1003",
+      "title": "Senha do computador expirada na 4ª Seção (SLog)",
+      "description": "Após retorno de exercício no terreno a senha da máquina bloqueou e não permite login.",
+      "category": "Esqueci a Senha / Usuário Bloqueado",
+      "priority": "media",
+      "status": "resolvido",
+      "requesterName": "1º Sgt Ferreira (SLog)",
+      "departmentId": "dept-s4",
+      "technicianId": "tech-2",
+      "createdAt": "2026-10-02T13:36:29.347Z",
+      "updatedAt": "2026-10-02T14:36:29.347Z",
+      "resolvedAt": "2026-10-02T14:36:29.347Z",
+      "slaLimitHours": 4,
+      "resolutionNotes": "Senha redefinida com sucesso pela auxiliar de informática.",
+      "rating": 5,
+      "userFeedback": "Excelente pronto atendimento da Seção de Informática.",
+      "history": [
+        {
+          "id": "h-4",
+          "date": "2026-10-02T13:36:29.347Z",
+          "author": "1º Sgt Ferreira",
+          "action": "Chamado Aberto"
+        },
+        {
+          "id": "h-5",
+          "date": "2026-10-02T14:36:29.347Z",
+          "author": "2º Sgt Beatriz Silveira",
+          "action": "Resolvido"
+        }
+      ]
+    },
+    {
+      "id": "t-1004",
+      "code": "TICKET-1004",
+      "title": "Instalação de leitora de cartão para token no Subcomando",
+      "description": "Necessário instalar driver homologado da leitora de cartão no gabinete do Subcomandante do Regimento.",
+      "category": "Sistemas Militares (SISBOL / Comprasnet / SIGELOG)",
+      "priority": "alta",
+      "status": "resolvido",
+      "requesterName": "Ten Cel Valente (S Cmt)",
+      "departmentId": "dept-cmt",
+      "technicianId": "tech-1",
+      "createdAt": "2026-10-01T12:36:29.347Z",
+      "updatedAt": "2026-10-01T13:36:29.347Z",
+      "resolvedAt": "2026-10-01T13:36:29.347Z",
+      "slaLimitHours": 2,
+      "resolutionNotes": "Cadeia de certificados e leitora configuradas e operacionais.",
+      "rating": 5,
+      "history": [
+        {
+          "id": "h-6",
+          "date": "2026-10-01T12:36:29.347Z",
+          "author": "Ten Cel Valente",
+          "action": "Chamado Aberto"
+        }
+      ]
+    }
+  ],
+  "notebook_loans": [
+    {
+      "id": "loan-01",
+      "notebookNumber": "DEODORO-NTB-014",
+      "notebookName": "Dell Latitude 3420 Rugged Core i5",
+      "borrowerName": "Maj Nogueira (Ch 3ª Seç)",
+      "departmentId": "dept-s3",
+      "loanDate": "2026-09-29",
+      "expectedReturnDate": "2026-10-06",
+      "originalExpectedReturnDate": "2026-10-06",
+      "extensionCount": 0,
+      "status": "cautelado",
+      "authorizedBy": "1º Ten Carlos Mendes (Ch Seç Info)",
+      "history": [
+        {
+          "id": "lh-1",
+          "date": "2026-09-29",
+          "author": "1º Ten Carlos Mendes",
+          "action": "criacao",
+          "summary": "Cautela autorizada para o Maj Nogueira (3ª Seção) para apoio à instrução de Artilharia."
+        }
+      ],
+      "messages": [
+        {
+          "id": "lm-1",
+          "sender": "ti",
+          "senderName": "1º Ten Carlos Mendes",
+          "content": "Notebook entregue com fonte original e cabo de rede militar.",
+          "createdAt": "2026-09-29"
+        }
+      ]
+    },
+    {
+      "id": "loan-02",
+      "notebookNumber": "DEODORO-NTB-028",
+      "notebookName": "Lenovo ThinkPad E14 Ryzen 7",
+      "borrowerName": "1º Ten Albuquerque (SALC)",
+      "departmentId": "dept-salc",
+      "loanDate": "2026-09-27",
+      "expectedReturnDate": "2026-10-04",
+      "originalExpectedReturnDate": "2026-10-04",
+      "extensionCount": 0,
+      "status": "cautelado",
+      "authorizedBy": "2º Sgt Beatriz Silveira (Aux Seç Info)",
+      "history": [
+        {
+          "id": "lh-2",
+          "date": "2026-09-27",
+          "author": "2º Sgt Beatriz Silveira",
+          "action": "criacao",
+          "summary": "Cautela autorizada para apoio a pregões eletrônicos da SALC."
+        }
+      ],
+      "messages": [
+        {
+          "id": "lm-2",
+          "sender": "ti",
+          "senderName": "2º Sgt Beatriz Silveira",
+          "content": "Configurado certificado digital de compras públicas.",
+          "createdAt": "2026-09-27"
+        }
+      ]
+    },
+    {
+      "id": "loan-03",
+      "notebookNumber": "DEODORO-NTB-005",
+      "notebookName": "HP ProBook 440 G8 Core i5",
+      "borrowerName": "Cap Mendes Braga (SLog)",
+      "departmentId": "dept-s4",
+      "loanDate": "2026-09-21",
+      "expectedReturnDate": "2026-10-01",
+      "originalExpectedReturnDate": "2026-10-01",
+      "extensionCount": 0,
+      "status": "cautelado",
+      "authorizedBy": "1º Ten Carlos Mendes (Ch Seç Info)",
+      "history": [
+        {
+          "id": "lh-3",
+          "date": "2026-09-21",
+          "author": "1º Ten Carlos Mendes",
+          "action": "criacao",
+          "summary": "Cautela autorizada para inventário semestral de munição da 4ª Seção."
+        },
+        {
+          "id": "lh-4",
+          "date": "2026-10-01",
+          "author": "Sistema TI",
+          "action": "inspecao",
+          "summary": "Data limite atingida sem devolução registrada. Equipamento em atraso."
+        }
+      ],
+      "messages": [
+        {
+          "id": "lm-3",
+          "sender": "ti",
+          "senderName": "Seção de TI",
+          "content": "Prazo limite expirou em 2 dias atrás. Gentileza comparecer à Seção de TI ou solicitar prorrogação com justificativa.",
+          "createdAt": "2026-10-02"
+        }
+      ]
+    },
+    {
+      "id": "loan-04",
+      "notebookNumber": "DEODORO-NTB-002",
+      "notebookName": "Dell Inspiron 15 Core i7",
+      "borrowerName": "Cap Vasconcelos (Fisc Adm)",
+      "departmentId": "dept-fisc",
+      "loanDate": "2026-09-15",
+      "expectedReturnDate": "2026-09-25",
+      "actualReturnDate": "2026-09-25",
+      "status": "devolvido",
+      "hasIssuesOnReturn": true,
+      "returnIssues": [
+        "LED indicador queimado ou apagado",
+        "Fonte / carregador com mau contato ou ausente"
+      ],
+      "returnNotes": "LED indicador de carga inoperante e cabo da fonte danificado. Encaminhado para substituição.",
+      "authorizedBy": "1º Ten Carlos Mendes (Ch Seç Info)",
+      "returnedAuthorizedBy": "2º Sgt Beatriz Silveira (Aux Seç Info)",
+      "history": [
+        {
+          "id": "lh-5",
+          "date": "2026-09-15",
+          "author": "1º Ten Carlos Mendes",
+          "action": "criacao",
+          "summary": "Cautela autorizada para a Fiscalização Administrativa."
+        },
+        {
+          "id": "lh-6",
+          "date": "2026-09-25",
+          "author": "2º Sgt Beatriz Silveira",
+          "action": "devolucao",
+          "summary": "Descautela realizada com apontamento de avarias na fonte e LED."
+        }
+      ]
+    },
+    {
+      "id": "loan-05",
+      "notebookNumber": "DEODORO-NTB-031",
+      "notebookName": "Acer TravelMate P2 Core i5",
+      "borrowerName": "Cap Oliveira (SPes)",
+      "departmentId": "dept-s1",
+      "loanDate": "2026-09-11",
+      "expectedReturnDate": "2026-09-19",
+      "actualReturnDate": "2026-09-19",
+      "status": "devolvido",
+      "hasIssuesOnReturn": false,
+      "returnNotes": "Equipamento conferido e recebido em perfeitas condições no quartel.",
+      "authorizedBy": "2º Sgt Beatriz Silveira (Aux Seç Info)",
+      "returnedAuthorizedBy": "1º Ten Carlos Mendes (Ch Seç Info)",
+      "history": [
+        {
+          "id": "lh-7",
+          "date": "2026-09-11",
+          "author": "2º Sgt Beatriz Silveira",
+          "action": "criacao",
+          "summary": "Cautela autorizada para conferência de fichas disciplinares na 1ª Seção."
+        },
+        {
+          "id": "lh-8",
+          "date": "2026-09-19",
+          "author": "1º Ten Carlos Mendes",
+          "action": "devolucao",
+          "summary": "Equipamento devolvido íntegro e em perfeito funcionamento."
+        }
+      ]
+    }
+  ],
+  "missions": [
+    {
+      "id": "mis-101",
+      "code": "MISSAO-101",
+      "title": "Passagem de Cabeamento Estruturado e Patch Cord no Pavilhão do Comando",
+      "description": "Instalação de conduítes, conectorização de cabos CAT6 blindados e teste de sinal na sala do Cmt e S Cmt do Regimento Deodoro.",
+      "priority": "urgente",
+      "status": "em_andamento",
+      "assignedTechnicianIds": [
+        "tech-3",
+        "tech-4"
+      ],
+      "createdBy": "1º Ten Carlos Mendes",
+      "createdByRole": "CH-SECINFO",
+      "createdAt": "2026-10-02",
+      "updatedAt": "2026-10-03T14:36:29.347Z",
+      "deadline": "2026-10-04T16:36:29.347Z",
+      "checklist": [
+        {
+          "id": "c-1",
+          "text": "Passagem dos cabos pelos conduítes externos",
+          "done": true
+        },
+        {
+          "id": "c-2",
+          "text": "Conectorização e crimpagem dos conectores RJ45",
+          "done": true
+        },
+        {
+          "id": "c-3",
+          "text": "Teste de atenuação com Fluke e certificação de porta",
+          "done": false
+        },
+        {
+          "id": "c-4",
+          "text": "Fechamento da canaleta e recolhimento de resíduos",
+          "done": false
+        }
+      ],
+      "notes": [
+        {
+          "id": "n-1",
+          "author": "1º Ten Carlos Mendes",
+          "authorRole": "CH-SECINFO",
+          "text": "Prioridade máxima devido à reunião de Estado-Maior amanhã às 08:30h.",
+          "createdAt": "2026-10-02"
+        },
+        {
+          "id": "n-2",
+          "author": "3º Sgt Lucas Rocha",
+          "authorRole": "CH-TECNICOINFO",
+          "text": "Cabos passados no duto principal. Iniciando conectorização das tomadas fêmea.",
+          "createdAt": "2026-10-03T14:36:29.347Z"
+        }
+      ]
+    },
+    {
+      "id": "mis-102",
+      "code": "MISSAO-102",
+      "title": "Manutenção Preventiva e Limpeza no Switch Core do Regimento",
+      "description": "Abertura do rack central da Seção de TI, aspiração de poeira dos coolers, conferência das fontes redundantes e backup das VLANs.",
+      "priority": "alta",
+      "status": "pendente",
+      "assignedTechnicianIds": [
+        "tech-3"
+      ],
+      "createdBy": "2º Sgt Beatriz Silveira",
+      "createdByRole": "CH-XERIFEINFO",
+      "createdAt": "2026-10-03T12:36:29.347Z",
+      "updatedAt": "2026-10-03T12:36:29.347Z",
+      "deadline": "2026-10-05T16:36:29.347Z",
+      "checklist": [
+        {
+          "id": "c-5",
+          "text": "Backup das configurações do switch core para pendrive seguro",
+          "done": false
+        },
+        {
+          "id": "c-6",
+          "text": "Aspiração estática dos módulos de ventilação",
+          "done": false
+        },
+        {
+          "id": "c-7",
+          "text": "Conferência dos LEDs de link de fibra óptica com o 4º Batalhão",
+          "done": false
+        }
+      ],
+      "notes": [
+        {
+          "id": "n-3",
+          "author": "2º Sgt Beatriz Silveira",
+          "authorRole": "CH-XERIFEINFO",
+          "text": "Executar preferencialmente após o término do expediente às 17h para não interromper os sistemas da fiscalização.",
+          "createdAt": "2026-10-03T12:36:29.347Z"
+        }
+      ]
+    },
+    {
+      "id": "mis-103",
+      "code": "MISSAO-103",
+      "title": "Instalação do SIGA-EB e Certificados Digitais na Formação Sanitária (FSR)",
+      "description": "Configuração do navegador militar, leitoras de cartão criptográfico e drivers dos tokens nos 3 computadores do atendimento médico.",
+      "priority": "normal",
+      "status": "pendente",
+      "assignedTechnicianIds": [
+        "tech-5"
+      ],
+      "createdBy": "1º Ten Carlos Mendes",
+      "createdByRole": "CH-SECINFO",
+      "createdAt": "2026-10-01",
+      "updatedAt": "2026-10-01",
+      "deadline": "2026-10-06T16:36:29.347Z",
+      "checklist": [
+        {
+          "id": "c-8",
+          "text": "Instalação da cadeia de certificados da ICP-Brasil e EB",
+          "done": false
+        },
+        {
+          "id": "c-9",
+          "text": "Configuração da extensão de assinatura digital",
+          "done": false
+        },
+        {
+          "id": "c-10",
+          "text": "Teste de autenticação com cartão funcional da Ten Med Daniele",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "mis-104",
+      "code": "MISSAO-104",
+      "title": "Revisão e Teste de Autonomia nos Nobreaks da 3ª Seção (Operações)",
+      "description": "Conferência do banco de baterias de 12V dos 2 nobreaks senoidais da sala de cartas e tiro do Regimento.",
+      "priority": "normal",
+      "status": "concluida",
+      "assignedTechnicianIds": [
+        "tech-3",
+        "tech-4"
+      ],
+      "createdBy": "1º Ten Carlos Mendes",
+      "createdByRole": "CH-SECINFO",
+      "createdAt": "2026-09-28",
+      "updatedAt": "2026-09-30",
+      "completedAt": "2026-09-30",
+      "deadline": "2026-09-30",
+      "checklist": [
+        {
+          "id": "c-11",
+          "text": "Medição de voltagem individual com multímetro",
+          "done": true
+        },
+        {
+          "id": "c-12",
+          "text": "Simulação de queda de rede por 20 minutos",
+          "done": true
+        },
+        {
+          "id": "c-13",
+          "text": "Relatório assinado pelo Maj Nogueira da 3ª Seção",
+          "done": true
+        }
+      ],
+      "notes": [
+        {
+          "id": "n-4",
+          "author": "3º Sgt Lucas Rocha",
+          "authorRole": "CH-TECNICOINFO",
+          "text": "Nobreaks testados com 42 minutos de autonomia sob carga plena. 100% operacionais.",
+          "createdAt": "2026-09-30"
+        }
+      ]
+    }
+  ],
+  "system_audit_logs": [
+    {
+      "id": "log-1791045425016-zqds",
+      "timestamp": "2026-10-03T16:37:05.016Z",
+      "militaryName": "1º Ten Mendes",
+      "militaryLogin": "secinfo",
+      "role": "CH-SECINFO",
+      "actionType": "STATUS_MISSAO",
+      "summary": "Tiragem de Faltas realizada (Formatura Matinal - 2026-10-03): 6 presentes de 7 militares",
+      "details": "Observações do oficial/sargento: Tiragem matinal do efetivo de TI",
+      "targetRef": "FORMATURA-2026-10-03",
+      "createdAt": "2026-10-03T16:37:05.016Z",
+      "updatedAt": "2026-10-03T16:37:05.016Z"
+    },
+    {
+      "id": "log-1791045418053-oyrp",
+      "timestamp": "2026-10-03T16:36:58.053Z",
+      "militaryName": "Administrador da TI",
+      "militaryLogin": "ti",
+      "role": "CH-SECINFO",
+      "actionType": "EXCLUSAO_CHAMADO",
+      "summary": "Excluiu definitivamente o chamado TICKET-9999 (Teste Deletar) do banco de dados",
+      "targetRef": "TICKET-9999",
+      "createdAt": "2026-10-03T16:36:58.053Z",
+      "updatedAt": "2026-10-03T16:36:58.053Z"
+    },
+    {
+      "id": "log-1",
+      "timestamp": "2026-10-01",
+      "militaryName": "1º Ten Carlos Mendes",
+      "militaryLogin": "secinfo",
+      "role": "CH-SECINFO",
+      "actionType": "LOGIN_SUCESSO",
+      "summary": "Autenticação no painel da Seção de TI realizada com sucesso."
+    },
+    {
+      "id": "log-2",
+      "timestamp": "2026-10-02",
+      "militaryName": "2º Sgt Beatriz Silveira",
+      "militaryLogin": "xerife",
+      "role": "CH-XERIFEINFO",
+      "actionType": "ATRIBUIR_TECNICO",
+      "summary": "Atribuiu o chamado TICKET-1002 para o 3º Sgt Lucas Rocha.",
+      "targetRef": "TICKET-1002"
+    }
+  ],
+  "attendance_records": [
+    {
+      "date": "2026-10-03",
+      "time": "08:00",
+      "shift": "Formatura Matinal",
+      "supervisorName": "1º Ten Mendes",
+      "supervisorRole": "CH-SECINFO",
+      "totalPresent": 6,
+      "totalAbsent": 1,
+      "totalStrength": 7,
+      "notes": "Tiragem matinal do efetivo de TI",
+      "roster": [
+        {
+          "militaryId": "u-1",
+          "militaryName": "Carlos Mendes",
+          "warName": "Mendes",
+          "rank": "1º Ten",
+          "status": "PRESENTE"
+        },
+        {
+          "militaryId": "u-2",
+          "militaryName": "Lucas Rocha",
+          "warName": "Rocha",
+          "rank": "3º Sgt",
+          "status": "PRESENTE"
+        }
+      ],
+      "id": "att-1791045425015",
+      "createdAt": "2026-10-03T16:37:05.015Z",
+      "updatedAt": "2026-10-03T16:37:05.015Z"
+    }
+  ],
+  "intranet_links": [
+    {
+      "id": "link-1",
+      "title": "Intranet 2º GAC (Regimento Deodoro)",
+      "url": "http://intranet.2gac.eb.mil.br",
+      "category": "Regimento",
+      "description": "Portal principal da Intranet do 2º Grupo de Artilharia de Campanha - Itu/SP."
+    },
+    {
+      "id": "link-2",
+      "title": "SPED / SIGA-EB",
+      "url": "https://sped.eb.mil.br",
+      "category": "Documentos",
+      "description": "Sistema de Protocolo Eletrônico e tramitação de documentos do Exército."
+    },
+    {
+      "id": "link-3",
+      "title": "SGEx - Secretaria-Geral do Exército",
+      "url": "http://www.sgex.eb.mil.br",
+      "category": "Normas & Legislação",
+      "description": "Boletins do Exército (BE), ostensivos e publicações oficiais."
+    },
+    {
+      "id": "link-4",
+      "title": "Webmail Institucional EB",
+      "url": "https://webmail.eb.mil.br",
+      "category": "Comunicação",
+      "description": "Acesso ao correio eletrônico corporativo @eb.mil.br."
+    },
+    {
+      "id": "link-5",
+      "title": "SisCoFi / SIAFI",
+      "url": "https://siscofi.eb.mil.br",
+      "category": "Finanças & Fiscalização",
+      "description": "Sistema de Controle Financeiro e acompanhamento de créditos."
+    },
+    {
+      "id": "link-6",
+      "title": "Portal CTI / Suporte Local 2º GAC",
+      "url": "http://10.24.0.10/suporte",
+      "category": "Seção de TI",
+      "description": "Servidor local da Seção de Informática e Telemática do Regimento."
+    },
+    {
+      "id": "link-7",
+      "title": "DCT - Depto de Ciência e Tecnologia",
+      "url": "http://www.dct.eb.mil.br",
+      "category": "Comunicações",
+      "description": "Diretrizes de segurança da informação e telemática militar."
+    }
+  ]
+}

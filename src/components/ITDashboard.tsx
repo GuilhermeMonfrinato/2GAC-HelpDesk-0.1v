@@ -39,6 +39,7 @@ interface ITDashboardProps {
   onUpdateTicketStatus: (ticketId: string, newStatus: TicketStatus, notes?: string) => void;
   onUpdateTicketPriority: (ticketId: string, newPriority: Priority) => void;
   onUpdateTicketTitle?: (ticketId: string, newTitle: string) => void;
+  onUpdateTicketCard?: (ticketId: string, updates: Partial<Ticket>) => void;
   onAssignTechnician: (ticketId: string, technicianId: string) => void;
   onAddTicketHistory: (ticketId: string, comment: string, author: string) => void;
   onDeleteTicket: (ticketId: string) => void;
@@ -62,6 +63,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
   onUpdateTicketStatus,
   onUpdateTicketPriority,
   onUpdateTicketTitle,
+  onUpdateTicketCard,
   onAssignTechnician,
   onAddTicketHistory,
   onDeleteTicket,
@@ -80,12 +82,13 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
   // Regras estritas solicitadas:
   // CH-SECINFO: total
   // CH-TVINFO: apenas exibição, sem interação
-  // CH-TECNICOINFO: consultar, responder, trocar de bloco
-  // CH-XERIFEINFO: setar técnicos, intervir em todos, trocar prioridade, excluir, editar nome
-  const canAssignTech = isXerife || isChefe;
-  const canChangePriority = isXerife || isChefe;
-  const canDelete = isXerife || isChefe;
-  const canEditTitle = isXerife || isChefe;
+  // CH-TECNICOINFO, CH-XERIFEINFO e CH-SECINFO podem operar e gerenciar chamados
+  // CH-TVINFO: apenas exibição, sem interação
+  const canAssignTech = !isTV;
+  const canChangePriority = !isTV;
+  const canDelete = !isTV;
+  const canEditTitle = !isTV;
+  const canEditCard = !isTV;
   const canMassIntervene = isXerife || isChefe;
   const canMoveStatus = !isTV;
   const canReplyChat = !isTV;
@@ -106,6 +109,20 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
   const [authorName, setAuthorName] = useState<string>(currentUser?.name || 'Seção de TI');
   const [resolutionText, setResolutionText] = useState<string>('');
   const [tiChatInput, setTiChatInput] = useState<string>('');
+
+  // Modais de Ações do Card: Exclusão, Conclusão e Edição Completa
+  const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
+  const [ticketToResolve, setTicketToResolve] = useState<Ticket | null>(null);
+  const [ticketToEdit, setTicketToEdit] = useState<Ticket | null>(null);
+  const [resolveNoteInput, setResolveNoteInput] = useState<string>('Atendimento técnico concluído com sucesso pela Seção de TI.');
+
+  // Form states para alteração completa das informações do card
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editPriority, setEditPriority] = useState<Priority>('media');
+  const [editDeptId, setEditDeptId] = useState('');
+  const [editTechId, setEditTechId] = useState('');
+  const [editRequesterName, setEditRequesterName] = useState('');
 
   // Edição do Nome/Título do Chamado (Exclusivo Xerife e Chefe)
   const [editingTicketTitle, setEditingTicketTitle] = useState<{ id: string; code: string; title: string } | null>(null);
@@ -192,37 +209,84 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
     }
   };
 
-  // Exclusão rápida de chamado com confirmação
+  // Exclusão rápida de chamado com confirmação via modal (sem window.confirm)
   const handleDeleteTicket = (ticket: Ticket) => {
-    const confirmDelete = window.confirm(
-      `Deseja realmente EXCLUIR o chamado ${ticket.code} (${ticket.title})?\n\nEsta ação removerá o chamado definitivamente do sistema.`
-    );
-    if (confirmDelete) {
-      if (activeTicket?.id === ticket.id) {
-        setActiveTicket(null);
-      }
-      onDeleteTicket(ticket.id);
-    }
+    setTicketToDelete(ticket);
   };
 
-  // Conclusão rápida de chamado com confirmação de despacho
+  const handleConfirmDelete = () => {
+    if (!ticketToDelete) return;
+    const tId = ticketToDelete.id;
+    if (activeTicket?.id === tId) {
+      setActiveTicket(null);
+    }
+    setTicketToDelete(null);
+    onDeleteTicket(tId);
+  };
+
+  // Conclusão rápida de chamado com confirmação de despacho via modal (sem window.prompt)
   const handleQuickResolve = (ticket: Ticket) => {
     if (ticket.status === 'resolvido') return;
-    const note = window.prompt(
-      `Concluir chamado ${ticket.code}?\n\nInforme o despacho da solução executada:`,
-      'Atendimento técnico concluído com sucesso pela Seção de TI.'
-    );
-    if (note !== null) {
-      onUpdateTicketStatus(ticket.id, 'resolvido', note.trim() || 'Atendimento concluído pela Seção de TI.');
-      if (activeTicket?.id === ticket.id) {
-        setActiveTicket(prev => prev ? {
-          ...prev,
-          status: 'resolvido',
-          resolvedAt: new Date().toISOString(),
-          resolutionNotes: note.trim() || 'Atendimento concluído pela Seção de TI.'
-        } : null);
+    setTicketToResolve(ticket);
+    setResolveNoteInput('Atendimento técnico concluído com sucesso pela Seção de TI.');
+  };
+
+  const handleConfirmResolve = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticketToResolve) return;
+    const note = resolveNoteInput.trim() || 'Atendimento concluído pela Seção de TI.';
+    onUpdateTicketStatus(ticketToResolve.id, 'resolvido', note);
+    if (activeTicket?.id === ticketToResolve.id) {
+      setActiveTicket(prev => prev ? {
+        ...prev,
+        status: 'resolvido',
+        resolvedAt: new Date().toISOString(),
+        resolutionNotes: note
+      } : null);
+    }
+    setTicketToResolve(null);
+  };
+
+  // Alteração completa das informações do card
+  const handleOpenEditCard = (ticket: Ticket) => {
+    setTicketToEdit(ticket);
+    setEditTitle(ticket.title);
+    setEditDesc(ticket.description);
+    setEditPriority(ticket.priority);
+    setEditDeptId(ticket.departmentId);
+    setEditTechId(ticket.technicianId || '');
+    setEditRequesterName(ticket.requesterName || '');
+  };
+
+  const handleConfirmEditCard = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticketToEdit) return;
+    const updates: Partial<Ticket> = {
+      title: editTitle.trim(),
+      description: editDesc.trim(),
+      priority: editPriority,
+      departmentId: editDeptId,
+      technicianId: editTechId || null,
+      requesterName: editRequesterName.trim() || ticketToEdit.requesterName,
+      slaLimitHours: editPriority === 'critica' ? 1 : editPriority === 'alta' ? 2 : editPriority === 'media' ? 4 : 24,
+    };
+    if (onUpdateTicketCard) {
+      onUpdateTicketCard(ticketToEdit.id, updates);
+    } else {
+      if (editTitle.trim() !== ticketToEdit.title && onUpdateTicketTitle) {
+        onUpdateTicketTitle(ticketToEdit.id, editTitle.trim());
+      }
+      if (editPriority !== ticketToEdit.priority) {
+        onUpdateTicketPriority(ticketToEdit.id, editPriority);
+      }
+      if (editTechId !== (ticketToEdit.technicianId || '')) {
+        onAssignTechnician(ticketToEdit.id, editTechId);
       }
     }
+    if (activeTicket?.id === ticketToEdit.id) {
+      setActiveTicket(prev => prev ? { ...prev, ...updates } : null);
+    }
+    setTicketToEdit(null);
   };
 
   // Início do arrasto do card
@@ -708,6 +772,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   onQuickResolve={() => handleQuickResolve(ticket)}
                   onDelete={() => handleDeleteTicket(ticket)}
                   onEditTitle={() => handleStartEditTitle(ticket)}
+                  onEditCard={() => handleOpenEditCard(ticket)}
                   onDragStart={(e) => handleDragStart(e, ticket)}
                 />
               ))}
@@ -783,6 +848,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   onQuickResolve={() => handleQuickResolve(ticket)}
                   onDelete={() => handleDeleteTicket(ticket)}
                   onEditTitle={() => handleStartEditTitle(ticket)}
+                  onEditCard={() => handleOpenEditCard(ticket)}
                   onDragStart={(e) => handleDragStart(e, ticket)}
                 />
               ))}
@@ -859,6 +925,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   onQuickResolve={() => handleQuickResolve(ticket)}
                   onDelete={() => handleDeleteTicket(ticket)}
                   onEditTitle={() => handleStartEditTitle(ticket)}
+                  onEditCard={() => handleOpenEditCard(ticket)}
                   onDragStart={(e) => handleDragStart(e, ticket)}
                 />
               ))}
@@ -930,6 +997,7 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                   onQuickResolve={() => handleQuickResolve(ticket)}
                   onDelete={() => handleDeleteTicket(ticket)}
                   onEditTitle={() => handleStartEditTitle(ticket)}
+                  onEditCard={() => handleOpenEditCard(ticket)}
                   onDragStart={(e) => handleDragStart(e, ticket)}
                 />
               ))}
@@ -1101,12 +1169,21 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
                               </span>
                             ) : null}
 
-                            {/* Botão de Excluir (Lixeira) - só Xerife e Chefe */}
+                            {/* Botão Alterar Informações do Card */}
+                            <button
+                              onClick={() => handleOpenEditCard(t)}
+                              className="p-1.5 rounded-lg text-slate-600 hover:text-[#1e3316] hover:bg-slate-100 border border-slate-200 transition-colors"
+                              title="Alterar informações deste card (título, prioridade, seção, técnico)"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+
+                            {/* Botão de Excluir (Lixeira) */}
                             {canDelete && (
                               <button
                                 onClick={() => handleDeleteTicket(t)}
                                 className="p-1.5 rounded-lg text-red-600 hover:bg-red-100 border border-red-200 transition-colors"
-                                title="Excluir Chamado (Xerife / Chefe)"
+                                title="Excluir Definitivamente este Chamado"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1336,11 +1413,21 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
               </div>
               
               <div className="flex items-center gap-2">
+                {/* Botão de Alterar Informações do Card */}
+                <button
+                  onClick={() => handleOpenEditCard(activeTicket)}
+                  className="p-2 rounded-xl text-slate-600 hover:text-[#1e3316] hover:bg-slate-100 border border-slate-200 transition-colors flex items-center gap-1.5 text-xs font-bold"
+                  title="Alterar informações deste chamado"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Editar Dados</span>
+                </button>
+
                 {/* Botão de Excluir */}
                 <button
                   onClick={() => handleDeleteTicket(activeTicket)}
                   className="p-2 rounded-xl text-red-600 hover:bg-red-50 border border-red-200 transition-colors"
-                  title="Excluir este chamado"
+                  title="Excluir este chamado definitivamente"
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>
@@ -1840,6 +1927,311 @@ export const ITDashboard: React.FC<ITDashboardProps> = ({
         </div>
       )}
 
+      {/* 1. MODAL DE CONFIRMAÇÃO DE EXCLUSÃO DEFINITIVA DO CHAMADO */}
+      {ticketToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl border-2 border-red-500/50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-red-100 text-red-700">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 leading-tight">
+                    Excluir Chamado?
+                  </h3>
+                  <span className="text-xs text-red-600 font-mono font-bold">
+                    Ação Irreversível no Banco
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setTicketToDelete(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-red-50/70 border border-red-200 space-y-2 text-xs">
+              <p className="text-slate-800 font-medium">
+                Você está prestes a excluir definitivamente o chamado da Seção de TI:
+              </p>
+              <div className="p-3 rounded-xl bg-white border border-red-200 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-black text-[#1e3316]">{ticketToDelete.code}</span>
+                  <span className="font-mono uppercase font-bold text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-800">
+                    {ticketToDelete.priority}
+                  </span>
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm leading-tight">{ticketToDelete.title}</h4>
+                <p className="text-[11px] text-slate-500">
+                  Solicitante: <strong>{ticketToDelete.requesterName}</strong> · Seção: <strong>{departments.find(d => d.id === ticketToDelete.departmentId)?.name}</strong>
+                </p>
+              </div>
+              <p className="text-[11px] text-red-700 font-semibold">
+                ⚠️ O registro será apagado do sistema e do banco de dados MySQL/Sequelize.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setTicketToDelete(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold hover:bg-slate-100 text-slate-700 text-xs transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-xs shadow-md border border-red-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4 text-white" />
+                <span>Sim, Excluir Chamado</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. MODAL DE CONCLUSÃO RÁPIDA (DESPACHO TÉCNICO) */}
+      {ticketToResolve && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl border-2 border-emerald-500/50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-800">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-700" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 leading-tight">
+                    Concluir Chamado
+                  </h3>
+                  <span className="text-xs text-slate-500 font-mono">
+                    {ticketToResolve.code} · Despacho de Finalização
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setTicketToResolve(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmResolve} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Despacho Técnico de Encerramento:
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={resolveNoteInput}
+                  onChange={(e) => setResolveNoteInput(e.target.value)}
+                  placeholder="Informe a solução técnica executada..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-[#27431e] bg-white text-slate-900"
+                />
+              </div>
+
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 block mb-1">Opções Rápidas de Despacho:</span>
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    'Atendimento técnico concluído com sucesso pela Seção de TI.',
+                    'Equipamento reparado, testado e pronto para uso.',
+                    'Configuração de rede e credenciais restabelecidas.',
+                    'Impressora desobstruída e suprimento reposto.'
+                  ].map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setResolveNoteInput(opt)}
+                      className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-[10px] text-left border border-emerald-200 transition-colors"
+                    >
+                      + {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setTicketToResolve(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 font-bold hover:bg-slate-100 text-slate-700 text-xs"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md border border-emerald-700 flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4 text-white" />
+                  <span>Concluir Chamado</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. MODAL DE ALTERAÇÃO COMPLETA DAS INFORMAÇÕES DO CARD */}
+      {ticketToEdit && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 space-y-4 shadow-2xl border-2 border-[#27431e]/40 my-6 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-[#1e3316] text-[#dfb642]">
+                  <Edit3 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 leading-tight">
+                    Alterar Informações do Card
+                  </h3>
+                  <span className="text-xs text-slate-500 font-mono">
+                    {ticketToEdit.code} · Gestão da Informação
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setTicketToEdit(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmEditCard} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Título / Nome da Ocorrência:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold focus:ring-2 focus:ring-[#27431e] bg-white text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Descrição Detalhada do Problema:
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-[#27431e] bg-white text-slate-900"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Militar Solicitante:
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editRequesterName}
+                    onChange={(e) => setEditRequesterName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Seção / Bateria do 2º GAC:
+                  </label>
+                  <select
+                    value={editDeptId}
+                    onChange={(e) => setEditDeptId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-slate-900"
+                  >
+                    {departments.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Prioridade Operacional:
+                  </label>
+                  <select
+                    value={editPriority}
+                    onChange={(e) => setEditPriority(e.target.value as Priority)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white text-slate-900"
+                  >
+                    <option value="baixa">BAIXA (SLA 24h)</option>
+                    <option value="media">MÉDIA (SLA 4h)</option>
+                    <option value="alta">ALTA (SLA 2h)</option>
+                    <option value="critica">CRÍTICA (SLA 1h - Urgente)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Militar Técnico Atribuído:
+                  </label>
+                  <select
+                    value={editTechId}
+                    onChange={(e) => setEditTechId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-slate-900"
+                  >
+                    <option value="">-- Não Atribuído --</option>
+                    {technicians.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const t = ticketToEdit;
+                    setTicketToEdit(null);
+                    handleDeleteTicket(t);
+                  }}
+                  className="px-3.5 py-2 rounded-xl border border-red-300 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Excluir este chamado"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Excluir</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTicketToEdit(null)}
+                    className="px-4 py-2 rounded-xl border border-slate-300 font-bold hover:bg-slate-100 text-slate-700 text-xs"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-[#1e3316] hover:bg-[#27431e] text-[#dfb642] font-black text-xs shadow-md border border-[#cba135]/50 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Check className="w-4 h-4 text-[#dfb642]" />
+                    <span>Salvar Informações</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
@@ -1859,6 +2251,7 @@ interface KanbanTicketCardProps {
   onQuickResolve: () => void;
   onDelete: () => void;
   onEditTitle: () => void;
+  onEditCard: () => void;
   onDragStart: (e: React.DragEvent) => void;
 }
 
@@ -1876,6 +2269,7 @@ const KanbanTicketCard: React.FC<KanbanTicketCardProps> = ({
   onQuickResolve,
   onDelete,
   onEditTitle,
+  onEditCard,
   onDragStart,
 }) => {
   const dept = departments.find(d => d.id === ticket.departmentId);
@@ -1915,7 +2309,7 @@ const KanbanTicketCard: React.FC<KanbanTicketCardProps> = ({
             {ticket.priority}
           </span>
 
-          {/* Botão Concluir Rápido (Check) - só para quem pode mover status */}
+          {/* Botão Concluir Rápido (Check) */}
           {!isResolved && canMoveStatus ? (
             <button
               type="button"
@@ -1934,7 +2328,20 @@ const KanbanTicketCard: React.FC<KanbanTicketCardProps> = ({
             </span>
           ) : null}
 
-          {/* Botão Deletar Rápido (Lixeira) - só para Xerife e Chefe */}
+          {/* Botão Alterar Informações do Card */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditCard();
+            }}
+            className="p-1 rounded-md text-slate-400 hover:text-[#1e3316] hover:bg-slate-100 border border-transparent hover:border-slate-300 transition-colors shrink-0"
+            title="Alterar informações deste card (título, descrição, prioridade, seção)"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Botão Deletar Rápido (Lixeira) */}
           {canDelete && (
             <button
               type="button"
@@ -1943,7 +2350,7 @@ const KanbanTicketCard: React.FC<KanbanTicketCardProps> = ({
                 onDelete();
               }}
               className="p-1 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors shrink-0"
-              title="Excluir Chamado (Xerife / Chefe)"
+              title="Excluir Definitivamente este Chamado"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>

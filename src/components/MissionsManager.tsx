@@ -20,9 +20,11 @@ import {
   ArrowRight,
   Send,
   Building2,
-  Users
+  Users,
+  ClipboardCheck
 } from 'lucide-react';
 import { Mission, MissionPriority, MissionStatus, MilitaryUser, Technician, AccessibilitySettings } from '../types';
+import { AttendanceModal } from './AttendanceModal';
 
 interface MissionsManagerProps {
   missions: Mission[];
@@ -42,6 +44,7 @@ interface MissionsManagerProps {
   onDeleteMission: (missionId: string) => void;
   onAddMissionNote: (missionId: string, noteText: string) => void;
   onToggleChecklistItem: (missionId: string, itemId: string) => void;
+  onAddAuditLog?: (log: any) => void;
 }
 
 export const MissionsManager: React.FC<MissionsManagerProps> = ({
@@ -55,6 +58,7 @@ export const MissionsManager: React.FC<MissionsManagerProps> = ({
   onDeleteMission,
   onAddMissionNote,
   onToggleChecklistItem,
+  onAddAuditLog,
 }) => {
   // Permissões
   const isChefe = currentUser?.role === 'CH-SECINFO';
@@ -70,6 +74,7 @@ export const MissionsManager: React.FC<MissionsManagerProps> = ({
 
   // Modais
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [editingMission, setEditingMission] = useState<Mission | null>(null);
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [deletingMissionId, setDeletingMissionId] = useState<string | null>(null);
@@ -231,16 +236,30 @@ export const MissionsManager: React.FC<MissionsManagerProps> = ({
           </div>
         </div>
 
-        {/* Botão de Criação (Apenas Chefe e Xerife) */}
-        {canManageMissions && (
+        {/* Botões de Ação do Topo: Tiragem de Faltas e Criação de Missão */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
+          {/* Botão de Tiragem de Faltas (Formatura do Dia) */}
           <button
-            onClick={openCreateModal}
-            className="w-full md:w-auto px-5 py-3 rounded-2xl bg-[#1e3316] hover:bg-[#27431e] text-[#dfb642] hover:text-white font-black text-sm flex items-center justify-center gap-2 transition-all shadow-md border border-[#cba135]/60 shrink-0 cursor-pointer"
+            type="button"
+            onClick={() => setIsAttendanceModalOpen(true)}
+            className="px-4 py-3 rounded-2xl bg-[#27431e] hover:bg-[#325727] text-[#dfb642] hover:text-white font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md border border-[#cba135]/60 shrink-0 cursor-pointer"
+            title="Realizar chamada/tiragem de faltas e consultar histórico militar"
           >
-            <Plus className="w-5 h-5" />
-            <span>+ Nova Missão da Seção</span>
+            <ClipboardCheck className="w-4 h-4 text-[#dfb642]" />
+            <span>📋 Tiragem de Faltas (Formatura)</span>
           </button>
-        )}
+
+          {canManageMissions && (
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="px-5 py-3 rounded-2xl bg-[#1e3316] hover:bg-[#27431e] text-[#dfb642] hover:text-white font-black text-sm flex items-center justify-center gap-2 transition-all shadow-md border border-[#cba135]/60 shrink-0 cursor-pointer"
+            >
+              <Plus className="w-5 h-5" />
+              <span>+ Nova Missão</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Cards de Métricas Rápidas */}
@@ -439,27 +458,62 @@ export const MissionsManager: React.FC<MissionsManagerProps> = ({
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
                   {/* Status Rápido para o Técnico */}
                   {canInteract && mission.status !== 'concluida' ? (
-                    mission.status === 'pendente' ? (
+                    <div className="flex items-center gap-1.5">
+                      {mission.status === 'pendente' && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onUpdateMission(mission.id, { status: 'em_andamento' });
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold border border-blue-200 transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Marcar início da operação"
+                        >
+                          <span>▶ Iniciar</span>
+                        </button>
+                      )}
                       <button
-                        onClick={() => onUpdateMission(mission.id, { status: 'em_andamento' })}
-                        className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold border border-blue-200 transition-colors flex items-center gap-1 cursor-pointer"
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const nowIso = new Date().toISOString();
+                          const allDoneChecklist = (mission.checklist || []).map(c => ({ ...c, done: true }));
+                          onUpdateMission(mission.id, { 
+                            status: 'concluida', 
+                            completedAt: nowIso,
+                            checklist: allDoneChecklist
+                          });
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm border border-emerald-700 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                        title="Concluir esta missão em 1 único clique"
                       >
-                        <span>▶ Iniciar Missão</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => onUpdateMission(mission.id, { status: 'concluida', completedAt: new Date().toISOString() })}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold border border-emerald-200 transition-colors flex items-center gap-1 cursor-pointer"
-                      >
-                        <Check className="w-3.5 h-3.5" />
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
                         <span>Concluir Missão</span>
                       </button>
-                    )
+                    </div>
                   ) : mission.status === 'concluida' ? (
-                    <span className="text-emerald-700 text-xs font-bold flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Concluída</span>
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-emerald-700 text-xs font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Concluída</span>
+                      </span>
+                      {canManageMissions && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onUpdateMission(mission.id, { status: 'em_andamento', completedAt: undefined });
+                          }}
+                          className="text-[10px] text-slate-500 hover:text-slate-800 underline font-mono cursor-pointer"
+                          title="Reabrir missão"
+                        >
+                          (Reabrir)
+                        </button>
+                      )}
+                    </div>
                   ) : null}
 
                   {/* Botões de Edição e Exclusão (Apenas Chefe e Xerife) */}
@@ -755,16 +809,44 @@ export const MissionsManager: React.FC<MissionsManagerProps> = ({
                         ▶ Marcar Em Andamento
                       </button>
                     )}
-                    {selectedMission.status !== 'concluida' && (
+                    {selectedMission.status !== 'concluida' ? (
                       <button
-                        onClick={() => {
-                          onUpdateMission(selectedMission.id, { status: 'concluida', completedAt: new Date().toISOString() });
-                          setSelectedMission(prev => prev ? { ...prev, status: 'concluida', completedAt: new Date().toISOString() } : null);
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const completedAt = new Date().toISOString();
+                          const allDoneChecklist = (selectedMission.checklist || []).map(c => ({ ...c, done: true }));
+                          onUpdateMission(selectedMission.id, { 
+                            status: 'concluida', 
+                            completedAt,
+                            checklist: allDoneChecklist
+                          });
+                          setSelectedMission(prev => prev ? { 
+                            ...prev, 
+                            status: 'concluida', 
+                            completedAt,
+                            checklist: allDoneChecklist
+                          } : null);
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold border border-emerald-200 cursor-pointer"
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black border border-emerald-700 cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-sm"
+                        title="Concluir esta missão imediatamente"
                       >
-                        <Check className="w-3.5 h-3.5" />
-                        Concluir Missão
+                        <Check className="w-4 h-4 text-white stroke-[3]" />
+                        <span>Concluir Missão (1 Clique)</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onUpdateMission(selectedMission.id, { status: 'em_andamento', completedAt: undefined });
+                          setSelectedMission(prev => prev ? { ...prev, status: 'em_andamento', completedAt: undefined } : null);
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 cursor-pointer"
+                      >
+                        <span>Reabrir Missão</span>
                       </button>
                     )}
                   </div>
@@ -925,6 +1007,17 @@ export const MissionsManager: React.FC<MissionsManagerProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modal Oficial de Tiragem de Faltas & Efetivo do 2º GAC */}
+      <AttendanceModal
+        isOpen={isAttendanceModalOpen}
+        onClose={() => setIsAttendanceModalOpen(false)}
+        militaryUsers={militaryUsers}
+        technicians={technicians}
+        currentUser={currentUser}
+        a11y={a11y}
+        onAddAuditLog={onAddAuditLog}
+      />
 
     </div>
   );

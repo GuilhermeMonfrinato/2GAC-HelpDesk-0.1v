@@ -1,0 +1,70 @@
+# =====================================================================
+# 2º GAC - REGIMENTO DEODORO | SEÇÃO DE INFORMÁTICA
+# DOCKER-COMPOSE OFICIAL PARA SERVIDOR LOCAL / INTRANET
+# =====================================================================
+
+version: '3.8'
+
+services:
+  # 1. Aplicação HelpDesk 2º GAC (Node.js / Express / Vite / SQLite / Web)
+  helpdesk-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: 2gac_helpdesk_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_TYPE=sqlite
+      - DB_FILE=/app/data/database.sqlite
+      # Para utilizar com MySQL descomente abaixo:
+      # - DB_HOST=db-mysql
+      # - DB_USER=deodoro_user
+      # - DB_PASS=deodoro_pass123
+      # - DB_NAME=regimento_deodoro_helpdesk
+    volumes:
+      - ./data:/app/data
+    networks:
+      - rede_regimento
+
+  # 2. Banco de Dados MySQL 8 (Opcional - se desejar servidor MySQL dedicado)
+  db-mysql:
+    image: mysql:8.0
+    container_name: 2gac_mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_deodoro_2026
+      MYSQL_DATABASE: regimento_deodoro_helpdesk
+      MYSQL_USER: deodoro_user
+      MYSQL_PASSWORD: deodoro_pass123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_dados:/var/lib/mysql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - rede_regimento
+
+  # 3. Servidor Web Apache / Reverse Proxy (Opcional para porta 80)
+  web-apache:
+    image: httpd:2.4-alpine
+    container_name: 2gac_apache_proxy
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./apache-proxy.conf:/usr/local/apache2/conf/httpd.conf:ro
+    depends_on:
+      - helpdesk-app
+    networks:
+      - rede_regimento
+
+networks:
+  rede_regimento:
+    driver: bridge
+
+volumes:
+  mysql_dados:

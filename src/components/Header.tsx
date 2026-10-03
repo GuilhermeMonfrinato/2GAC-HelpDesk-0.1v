@@ -8,15 +8,16 @@ import {
   Eye, 
   ZoomIn, 
   ZoomOut,
-  LogOut
+  LogOut,
+  Target
 } from 'lucide-react';
-import { AccessibilitySettings } from '../types';
+import { AccessibilitySettings, AdminTab } from '../types';
 import { RegimentoDeodoroLogo } from './RegimentoDeodoroLogo';
 
 interface HeaderProps {
   isAdminRoute: boolean;
-  adminTab: 'it' | 'notebooks' | 'technicians';
-  onSelectAdminTab: (tab: 'it' | 'notebooks' | 'technicians') => void;
+  adminTab: AdminTab;
+  onSelectAdminTab: (tab: AdminTab) => void;
   isAdminAuthenticated: boolean;
   onLogoutAdmin: () => void;
   onNavigateToClient: () => void;
@@ -133,6 +134,18 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <button
+              onClick={() => onSelectAdminTab('missions')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-colors flex items-center gap-2 whitespace-nowrap ${
+                adminTab === 'missions'
+                  ? 'bg-[#dfb642] text-[#192b14] shadow-md'
+                  : 'text-emerald-100 hover:text-white hover:bg-[#27431e]'
+              }`}
+            >
+              <Target className="w-4 h-4" />
+              <span>Missões da TI</span>
+            </button>
+
+            <button
               onClick={() => onSelectAdminTab('technicians')}
               className={`px-3.5 py-2 rounded-xl text-xs font-black transition-colors flex items-center gap-2 whitespace-nowrap ${
                 adminTab === 'technicians'
@@ -239,6 +252,15 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Laptop className="w-3.5 h-3.5" />
             <span>Cautelas ({activeLoansCount})</span>
+          </button>
+          <button
+            onClick={() => onSelectAdminTab('missions')}
+            className={`px-2.5 py-1.5 rounded-lg flex items-center gap-1 ${
+              adminTab === 'missions' ? 'bg-[#dfb642] text-[#192b14]' : 'text-emerald-100'
+            }`}
+          >
+            <Target className="w-3.5 h-3.5" />
+            <span>Missões</span>
           </button>
           <button
             onClick={() => onSelectAdminTab('technicians')}

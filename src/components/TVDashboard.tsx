@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Shield, 
   Clock, 
@@ -33,16 +34,18 @@ export const TVDashboard: React.FC<TVDashboardProps> = ({
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Travar scroll da página e escutar tecla ESC
+  // Travar scroll do body enquanto o painel de TV estiver ativo e escutar tecla ESC
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', handleKeyDown);
@@ -81,8 +84,10 @@ export const TVDashboard: React.FC<TVDashboardProps> = ({
     return `${hours}h ${mins > 0 ? `${mins}m` : ''} atrás`;
   };
 
-  return (
-    <div className="fixed inset-0 z-[9999] bg-[#0d160a] text-slate-100 flex flex-col overflow-hidden font-sans select-none">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[999999] bg-[#0d160a] text-slate-100 flex flex-col overflow-hidden font-sans select-none">
       {/* Marca d'água artística do General Mallet & Obuseiros de Artilharia */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.08] bg-cover bg-center bg-no-repeat"
@@ -391,6 +396,7 @@ export const TVDashboard: React.FC<TVDashboardProps> = ({
         </div>
       </footer>
 
-    </div>
+    </div>,
+    document.body
   );
 };

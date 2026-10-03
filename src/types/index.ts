@@ -197,7 +197,41 @@ export interface NotebookLoan {
   messages?: LoanMessage[];
 }
 
+export type AdminTab = 'it' | 'notebooks' | 'missions' | 'technicians';
+
 export interface AccessibilitySettings {
   fontSize: 'normal' | 'large' | 'extralarge';
   highContrast: boolean;
+}
+
+export type AttendanceStatus = 
+  | 'PRESENTE' 
+  | 'FALTA' 
+  | 'DISPENSA_MEDICA' 
+  | 'MISSAO_EXTERNA' 
+  | 'SERVICO_ESCALA' 
+  | 'FERIAS_LUTO';
+
+export interface AttendanceRosterItem {
+  militaryId: string;
+  militaryName: string;
+  warName: string;
+  rank: string;
+  status: AttendanceStatus;
+  reason?: string;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  shift: string;
+  supervisorName: string;
+  supervisorRole: string;
+  totalPresent: number;
+  totalAbsent: number;
+  totalStrength: number;
+  notes?: string;
+  roster: AttendanceRosterItem[];
+  createdAt?: string;
 }

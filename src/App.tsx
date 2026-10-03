@@ -6,6 +6,7 @@ import { EmployeePortal } from './components/EmployeePortal';
 import { ITDashboard } from './components/ITDashboard';
 import { NotebookLoans } from './components/NotebookLoans';
 import { TechniciansManager } from './components/TechniciansManager';
+import { MissionsManager } from './components/MissionsManager';
 import { TVDashboard } from './components/TVDashboard';
 import { AdminLogin } from './components/AdminLogin';
 import { 
@@ -21,7 +22,10 @@ import {
   MilitaryUser,
   SystemAuditLog,
   LoanHistoryItem,
-  LoanMessage
+  LoanMessage,
+  Mission,
+  MissionPriority,
+  AdminTab
 } from './types';
 import { 
   loadTickets, 
@@ -42,8 +46,12 @@ import {
   loadCurrentUser,
   saveCurrentUser,
   loadAccessibilitySettings, 
-  saveAccessibilitySettings 
+  saveAccessibilitySettings,
+  loadMissions,
+  saveMissions,
+  syncAllFromBackend
 } from './utils/storage';
+import { api } from './utils/api';
 import { Lock, Globe } from 'lucide-react';
 import { IntranetModal } from './components/IntranetModal';
 import malletBg from './assets/mallet_bg.jpg';
@@ -60,7 +68,7 @@ export default function App() {
   };
 
   const [isAdminRoute, setIsAdminRoute] = useState<boolean>(getIsAdminPath);
-  const [adminTab, setAdminTab] = useState<'it' | 'notebooks' | 'technicians'>('it');
+  const [adminTab, setAdminTab] = useState<AdminTab>('it');
   const [isTvModeOpen, setIsTvModeOpen] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [isIntranetModalOpen, setIsIntranetModalOpen] = useState<boolean>(false);
@@ -113,8 +121,22 @@ export default function App() {
   const [categories, setCategories] = useState<Category[]>(() => loadCategories());
   const [notebookLoans, setNotebookLoans] = useState<NotebookLoan[]>(() => loadNotebookLoans());
   const [militaryUsers, setMilitaryUsers] = useState<MilitaryUser[]>(() => loadMilitaryUsers());
+  const [missions, setMissions] = useState<Mission[]>(() => loadMissions());
   const [auditLogs, setAuditLogs] = useState<SystemAuditLog[]>(() => loadAuditLogs());
   const [a11y, setA11y] = useState<AccessibilitySettings>(() => loadAccessibilitySettings());
+
+  // Sincronização inicial com o Banco Sequelize (MySQL / SQLite)
+  useEffect(() => {
+    syncAllFromBackend({
+      setTickets,
+      setDepartments,
+      setTechnicians,
+      setMilitaryUsers,
+      setNotebookLoans,
+      setMissions,
+      setAuditLogs,
+    });
+  }, []);
 
   // Salvar no localStorage quando o estado mudar
   useEffect(() => {
@@ -140,6 +162,10 @@ export default function App() {
   useEffect(() => {
     saveMilitaryUsers(militaryUsers);
   }, [militaryUsers]);
+
+  useEffect(() => {
+    saveMissions(missions);
+  }, [missions]);
 
   useEffect(() => {
     saveAuditLogs(auditLogs);
@@ -225,6 +251,12 @@ export default function App() {
     };
 
     setTickets(prev => [newTicket, ...prev]);
+
+    // Persistir no banco Sequelize
+    api.createTicket(newTicket).catch(err => {
+      console.warn('[API] Falha temporária ao salvar novo chamado no banco:', err);
+    });
+
     return newTicket;
   };
 
@@ -255,6 +287,10 @@ export default function App() {
       };
     }));
 
+    api.updateTicketStatus(ticketId, newStatus, notes).catch(err => {
+      console.warn('[API] Erro ao atualizar status no banco:', err);
+    });
+
     handleAddAuditLog({
       militaryName: currentUser?.name || 'Militar da TI',
       militaryLogin: currentUser?.username || 'ti',
@@ -266,11 +302,11 @@ export default function App() {
     });
   };
 
-  // Handler: Mudar prioridade do chamado (Exclusivo Xerife e Chefe)
+  // Handler: Mudar prioridade do chamado
   const handleUpdateTicketPriority = (ticketId: string, newPriority: Priority) => {
     const ticketTarget = tickets.find(t => t.id === ticketId);
     const newSla = newPriority === 'critica' ? 1 : newPriority === 'alta' ? 2 : newPriority === 'media' ? 4 : 24;
-    const author = currentUser?.name || 'Xerife da TI';
+    const author = currentUser?.name || 'Militar da TI';
 
     setTickets(prev => prev.map(t => {
       if (t.id !== ticketId) return t;
@@ -291,21 +327,25 @@ export default function App() {
       };
     }));
 
+    api.updateTicket(ticketId, { priority: newPriority, slaLimitHours: newSla }).catch(err => {
+      console.warn('[API] Erro ao atualizar prioridade no banco:', err);
+    });
+
     handleAddAuditLog({
-      militaryName: currentUser?.name || 'Xerife da TI',
-      militaryLogin: currentUser?.username || 'xerife',
-      role: currentUser?.role || 'CH-XERIFEINFO',
+      militaryName: currentUser?.name || 'Militar da TI',
+      militaryLogin: currentUser?.username || 'ti',
+      role: currentUser?.role || 'CH-SECINFO',
       actionType: 'PRIORIDADE_CHAMADO',
       summary: `Alterou a prioridade do chamado ${ticketTarget?.code || ticketId} para "${newPriority.toUpperCase()}"`,
       targetRef: ticketTarget?.code || ticketId,
     });
   };
 
-  // Handler: Editar Nome/Título do Chamado (Exclusivo Xerife e Chefe)
+  // Handler: Editar Nome/Título do Chamado
   const handleUpdateTicketTitle = (ticketId: string, newTitle: string) => {
     const ticketTarget = tickets.find(t => t.id === ticketId);
     const oldTitle = ticketTarget?.title || '';
-    const author = currentUser?.name || 'Xerife da TI';
+    const author = currentUser?.name || 'Militar da TI';
 
     setTickets(prev => prev.map(t => {
       if (t.id !== ticketId) return t;
@@ -326,10 +366,14 @@ export default function App() {
       };
     }));
 
+    api.updateTicket(ticketId, { title: newTitle.trim() }).catch(err => {
+      console.warn('[API] Erro ao atualizar título no banco:', err);
+    });
+
     handleAddAuditLog({
-      militaryName: currentUser?.name || 'Xerife da TI',
-      militaryLogin: currentUser?.username || 'xerife',
-      role: currentUser?.role || 'CH-XERIFEINFO',
+      militaryName: currentUser?.name || 'Militar da TI',
+      militaryLogin: currentUser?.username || 'ti',
+      role: currentUser?.role || 'CH-SECINFO',
       actionType: 'EDITAR_TITULO_CHAMADO',
       summary: `Editou o nome/título do chamado ${ticketTarget?.code || ticketId} para "${newTitle.trim()}"`,
       details: `Título anterior: "${oldTitle}"`,
@@ -337,19 +381,173 @@ export default function App() {
     });
   };
 
-  // Handler: Excluir chamado (Exclusivo Xerife e Chefe)
+  // Handler: Alterar informações completas do card (título, descrição, prioridade, seção, técnico)
+  const handleUpdateTicketCard = (ticketId: string, updates: Partial<Ticket>) => {
+    const author = currentUser?.name || 'Militar da TI';
+    setTickets(prev => prev.map(t => {
+      if (t.id !== ticketId) return t;
+      return {
+        ...t,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+        history: [
+          ...t.history,
+          {
+            id: `h-${Date.now()}`,
+            date: new Date().toISOString(),
+            author,
+            action: 'Informações do card alteradas na TI',
+            comment: updates.title ? `Título: "${updates.title}"` : undefined,
+          }
+        ]
+      };
+    }));
+
+    api.updateTicket(ticketId, updates).catch(err => {
+      console.warn('[API] Erro ao atualizar dados do card no banco:', err);
+    });
+
+    handleAddAuditLog({
+      militaryName: currentUser?.name || 'Militar da TI',
+      militaryLogin: currentUser?.username || 'ti',
+      role: currentUser?.role || 'CH-SECINFO',
+      actionType: 'EDITAR_TITULO_CHAMADO',
+      summary: `Alterou informações do card do chamado ${ticketId}`,
+      targetRef: ticketId,
+    });
+  };
+
+  // Handler: Excluir chamado definitivamente (Lixeira)
   const handleDeleteTicket = (ticketId: string) => {
     const ticketTarget = tickets.find(t => t.id === ticketId);
     setTickets(prev => prev.filter(t => t.id !== ticketId));
 
+    // Excluir definitivamente no banco Sequelize (MySQL / SQLite)
+    api.deleteTicket(ticketId).catch(err => {
+      console.warn('[API] Erro ao deletar chamado do banco:', err);
+    });
+
     handleAddAuditLog({
-      militaryName: currentUser?.name || 'Xerife da TI',
-      militaryLogin: currentUser?.username || 'xerife',
-      role: currentUser?.role || 'CH-XERIFEINFO',
+      militaryName: currentUser?.name || 'Militar da TI',
+      militaryLogin: currentUser?.username || 'ti',
+      role: currentUser?.role || 'CH-SECINFO',
       actionType: 'EXCLUSAO_CHAMADO',
-      summary: `Excluiu definitivamente o chamado ${ticketTarget?.code || ticketId} (${ticketTarget?.title})`,
+      summary: `Excluiu definitivamente o chamado ${ticketTarget?.code || ticketId} (${ticketTarget?.title || ''})`,
       targetRef: ticketTarget?.code || ticketId,
     });
+  };
+
+  // HANDLERS PARA MISSÕES DA TI (ORDENS DE OPERAÇÕES)
+  const handleAddMission = (missionData: {
+    title: string;
+    description: string;
+    priority: MissionPriority;
+    assignedTechnicianIds: string[];
+    deadline?: string;
+    checklistItems: string[];
+  }) => {
+    const nextNum = 100 + missions.length + 1;
+    const nowIso = new Date().toISOString();
+    const createdBy = currentUser?.name || 'Chefe da TI';
+    const createdByRole = currentUser?.role || 'CH-SECINFO';
+
+    const newMission: Mission = {
+      id: `m-${Date.now()}`,
+      code: `OP-${nextNum}`,
+      title: missionData.title,
+      description: missionData.description,
+      priority: missionData.priority,
+      status: 'pendente',
+      assignedTechnicianIds: missionData.assignedTechnicianIds,
+      createdBy,
+      createdByRole,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      deadline: missionData.deadline,
+      checklist: (missionData.checklistItems || []).map((text, idx) => ({
+        id: `chk-${Date.now()}-${idx}`,
+        text,
+        done: false,
+      })),
+      notes: [],
+    };
+
+    setMissions(prev => [newMission, ...prev]);
+
+    api.createMission(newMission).catch(err => {
+      console.warn('[API] Erro ao salvar missão no banco:', err);
+    });
+
+    handleAddAuditLog({
+      militaryName: currentUser?.name || 'Chefe da TI',
+      militaryLogin: currentUser?.username || 'secinfo',
+      role: currentUser?.role || 'CH-SECINFO',
+      actionType: 'CRIACAO_MISSAO',
+      summary: `Criou a missão ${newMission.code}: "${newMission.title}"`,
+      targetRef: newMission.code,
+    });
+  };
+
+  const handleUpdateMission = (missionId: string, updates: Partial<Mission>) => {
+    setMissions(prev => prev.map(m => {
+      if (m.id !== missionId) return m;
+      return { ...m, ...updates };
+    }));
+
+    api.updateMission(missionId, updates).catch(err => {
+      console.warn('[API] Erro ao atualizar missão no banco:', err);
+    });
+  };
+
+  const handleDeleteMission = (missionId: string) => {
+    const target = missions.find(m => m.id === missionId);
+    setMissions(prev => prev.filter(m => m.id !== missionId));
+
+    api.deleteMission(missionId).catch(err => {
+      console.warn('[API] Erro ao excluir missão do banco:', err);
+    });
+
+    handleAddAuditLog({
+      militaryName: currentUser?.name || 'Chefe da TI',
+      militaryLogin: currentUser?.username || 'secinfo',
+      role: currentUser?.role || 'CH-SECINFO',
+      actionType: 'EXCLUSAO_MISSAO',
+      summary: `Excluiu a ordem de missão ${target?.code || missionId}`,
+      targetRef: target?.code || missionId,
+    });
+  };
+
+  const handleAddMissionNote = (missionId: string, noteText: string) => {
+    const author = currentUser?.name || 'Militar da TI';
+    const authorRole = currentUser?.role || 'CH-TECNICOINFO';
+    const newNote = {
+      id: `mn-${Date.now()}`,
+      author,
+      authorRole,
+      text: noteText,
+      createdAt: new Date().toISOString(),
+    };
+
+    setMissions(prev => prev.map(m => {
+      if (m.id !== missionId) return m;
+      const updatedNotes = [...(m.notes || []), newNote];
+      api.updateMission(missionId, { notes: updatedNotes }).catch(() => {});
+      return {
+        ...m,
+        notes: updatedNotes,
+      };
+    }));
+  };
+
+  const handleToggleChecklistItem = (missionId: string, itemId: string) => {
+    setMissions(prev => prev.map(m => {
+      if (m.id !== missionId) return m;
+      const updatedChecklist = (m.checklist || []).map(c => 
+        c.id === itemId ? { ...c, done: !c.done } : c
+      );
+      api.updateMission(missionId, { checklist: updatedChecklist }).catch(() => {});
+      return { ...m, checklist: updatedChecklist };
+    }));
   };
 
   // Handler: Intervenção em Massa (Xerife envia mensagem em todos os chamados abertos)
@@ -715,7 +913,6 @@ export default function App() {
       actionType: 'LOGIN_SUCESSO',
       summary: `Sessão alternada para o militar ${user.name} (${user.role}).`,
     });
-    alert(`Sessão alterada para ${user.name} com perfil [${user.role}].`);
   };
 
   // Classes de Acessibilidade
@@ -734,6 +931,7 @@ export default function App() {
     return acc + unread;
   }, 0);
   const criticalCount = tickets.filter(t => t.priority === 'critica' && t.status !== 'resolvido' && t.status !== 'cancelado').length;
+  const openMissionsCount = missions.filter(m => m.status !== 'concluida').length;
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors ${fontSizeClass} ${contrastClass} ${
@@ -750,6 +948,7 @@ export default function App() {
             openTicketsCount={openTicketsCount}
             activeLoansCount={activeLoansCount}
             techniciansCount={militaryUsers.length}
+            missionsCount={openMissionsCount}
             unreadMessagesCount={unreadMessagesCount}
             onOpenTvMode={() => setIsTvModeOpen(true)}
             onLogoutAdmin={handleAdminLogout}
@@ -784,6 +983,7 @@ export default function App() {
                   onUpdateTicketStatus={handleUpdateTicketStatus}
                   onUpdateTicketPriority={handleUpdateTicketPriority}
                   onUpdateTicketTitle={handleUpdateTicketTitle}
+                  onUpdateTicketCard={handleUpdateTicketCard}
                   onAssignTechnician={handleAssignTechnician}
                   onAddTicketHistory={handleAddTicketHistory}
                   onDeleteTicket={handleDeleteTicket}
@@ -805,6 +1005,22 @@ export default function App() {
                   onReturnLoan={handleReturnNotebookLoan}
                   onExtendLoan={handleExtendNotebookLoan}
                   onSendLoanMessage={handleSendLoanMessage}
+                />
+              )}
+
+              {adminTab === 'missions' && (
+                <MissionsManager
+                  missions={missions}
+                  technicians={technicians}
+                  militaryUsers={militaryUsers}
+                  currentUser={currentUser}
+                  a11y={a11y}
+                  onAddMission={handleAddMission}
+                  onUpdateMission={handleUpdateMission}
+                  onDeleteMission={handleDeleteMission}
+                  onAddMissionNote={handleAddMissionNote}
+                  onToggleChecklistItem={handleToggleChecklistItem}
+                  onAddAuditLog={handleAddAuditLog}
                 />
               )}
 

@@ -10,13 +10,14 @@ import {
   Clock,
   ShieldAlert,
   Shield,
-  UserCheck
+  UserCheck,
+  Target
 } from 'lucide-react';
-import { AccessibilitySettings, MilitaryUser } from '../types';
+import { AccessibilitySettings, MilitaryUser, AdminTab } from '../types';
 import { RegimentoDeodoroLogo } from './RegimentoDeodoroLogo';
 
 interface AdminTopBarProps {
-  adminTab: 'it' | 'notebooks' | 'technicians';
+  adminTab: AdminTab;
   onToggleMobileSidebar: () => void;
   unreadMessagesCount: number;
   onOpenTvMode: () => void;
@@ -61,6 +62,12 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({
           title: 'Cautela de Notebooks',
           subtitle: 'Registro de cautelas, descautelas e conferência de CTI',
           icon: <Laptop className="w-5 h-5 text-[#27431e]" />
+        };
+      case 'missions':
+        return {
+          title: 'Missões & Ordens de Operações da TI',
+          subtitle: 'Escalações técnicas e tiragem de faltas da Seção',
+          icon: <Target className="w-5 h-5 text-[#27431e]" />
         };
       case 'technicians':
         return {

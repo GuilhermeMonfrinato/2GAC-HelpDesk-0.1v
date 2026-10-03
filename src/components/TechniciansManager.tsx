@@ -24,7 +24,8 @@ import {
   ArrowRight,
   Sparkles,
   RefreshCw,
-  FileText
+  FileText,
+  ShieldAlert
 } from 'lucide-react';
 import { 
   Technician, 

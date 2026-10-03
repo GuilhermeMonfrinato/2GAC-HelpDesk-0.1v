@@ -19,6 +19,7 @@ import {
   initialAuditLogs,
   initialMissions
 } from '../data/mockData';
+import { api } from './api';
 
 const STORAGE_KEYS = {
   TICKETS: 'eb_tickets_v4',
@@ -32,6 +33,60 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'eb_current_user_v4',
   MISSIONS: 'eb_missions_v4',
   LAST_PAGE: 'eb_deodoro_last_page_v1',
+};
+
+// Sincronização inicial com o banco Sequelize em background
+export const syncAllFromBackend = async (callbacks?: {
+  setTickets?: (tickets: Ticket[]) => void;
+  setDepartments?: (departments: Department[]) => void;
+  setTechnicians?: (technicians: Technician[]) => void;
+  setMilitaryUsers?: (users: MilitaryUser[]) => void;
+  setNotebookLoans?: (loans: NotebookLoan[]) => void;
+  setMissions?: (missions: Mission[]) => void;
+  setAuditLogs?: (logs: SystemAuditLog[]) => void;
+}) => {
+  try {
+    const [tickets, departments, technicians, militaryUsers, loans, missions, logs] = await Promise.allSettled([
+      api.getTickets(),
+      api.getDepartments(),
+      api.getTechnicians(),
+      api.getMilitaryUsers(),
+      api.getNotebookLoans(),
+      api.getMissions(),
+      api.getAuditLogs(),
+    ]);
+
+    if (tickets.status === 'fulfilled' && tickets.value.length > 0) {
+      saveTickets(tickets.value);
+      callbacks?.setTickets?.(tickets.value);
+    }
+    if (departments.status === 'fulfilled' && departments.value.length > 0) {
+      saveDepartments(departments.value);
+      callbacks?.setDepartments?.(departments.value);
+    }
+    if (technicians.status === 'fulfilled' && technicians.value.length > 0) {
+      saveTechnicians(technicians.value);
+      callbacks?.setTechnicians?.(technicians.value);
+    }
+    if (militaryUsers.status === 'fulfilled' && militaryUsers.value.length > 0) {
+      saveMilitaryUsers(militaryUsers.value);
+      callbacks?.setMilitaryUsers?.(militaryUsers.value);
+    }
+    if (loans.status === 'fulfilled' && loans.value.length > 0) {
+      saveNotebookLoans(loans.value);
+      callbacks?.setNotebookLoans?.(loans.value);
+    }
+    if (missions.status === 'fulfilled' && missions.value.length > 0) {
+      saveMissions(missions.value);
+      callbacks?.setMissions?.(missions.value);
+    }
+    if (logs.status === 'fulfilled' && logs.value.length > 0) {
+      saveAuditLogs(logs.value);
+      callbacks?.setAuditLogs?.(logs.value);
+    }
+  } catch (err) {
+    console.warn('[Sync] Falha temporária de sincronização com backend:', err);
+  }
 };
 
 export const loadTickets = (): Ticket[] => {

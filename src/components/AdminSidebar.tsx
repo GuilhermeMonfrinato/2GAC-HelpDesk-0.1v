@@ -18,17 +18,19 @@ import {
   Lock,
   Unlock,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Target
 } from 'lucide-react';
-import { AccessibilitySettings, MilitaryUser } from '../types';
+import { AccessibilitySettings, MilitaryUser, AdminTab } from '../types';
 import { RegimentoDeodoroLogo } from './RegimentoDeodoroLogo';
 
 interface AdminSidebarProps {
-  adminTab: 'it' | 'notebooks' | 'technicians';
-  onSelectAdminTab: (tab: 'it' | 'notebooks' | 'technicians') => void;
+  adminTab: AdminTab;
+  onSelectAdminTab: (tab: AdminTab) => void;
   openTicketsCount: number;
   activeLoansCount: number;
   techniciansCount: number;
+  missionsCount?: number;
   unreadMessagesCount: number;
   onOpenTvMode: () => void;
   onLogoutAdmin: () => void;
@@ -46,6 +48,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   openTicketsCount,
   activeLoansCount,
   techniciansCount,
+  missionsCount = 0,
   unreadMessagesCount,
   onOpenTvMode,
   onLogoutAdmin,
@@ -316,7 +319,49 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 )}
               </button>
 
-              {/* Item 3: Militares & Auditoria */}
+              {/* Item 3: Missões & Ordens da TI */}
+              <button
+                onClick={() => {
+                  onSelectAdminTab('missions');
+                  onCloseMobile();
+                }}
+                title="Missões & Ordens da TI (Escalações & Tiragem de Faltas)"
+                className={`w-full rounded-2xl text-left text-xs font-bold transition-all flex items-center group ${
+                  isExpanded ? 'px-3.5 py-3 justify-between' : 'p-3 justify-center'
+                } ${
+                  adminTab === 'missions'
+                    ? a11y.highContrast
+                      ? 'bg-yellow-400 text-black font-black shadow-md'
+                      : 'bg-[#dfb642] text-[#192b14] font-black shadow-lg scale-[1.01]'
+                    : 'text-slate-200 hover:bg-[#1e3316] hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`p-2 rounded-xl shrink-0 ${
+                    adminTab === 'missions' ? 'bg-[#192b14] text-[#dfb642]' : 'bg-[#1e3316] text-emerald-300 group-hover:bg-[#27431e]'
+                  }`}>
+                    <Target className="w-4 h-4" />
+                  </div>
+                  {isExpanded && (
+                    <div className="min-w-0 truncate">
+                      <span className="block text-sm truncate">Missões da TI</span>
+                      <span className={`text-[10px] font-normal block truncate ${adminTab === 'missions' ? 'text-[#192b14]/80' : 'text-slate-400'}`}>
+                        Ordens & Faltas
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {isExpanded && missionsCount > 0 && (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold shrink-0 ml-1 ${
+                    adminTab === 'missions' ? 'bg-[#192b14] text-[#dfb642]' : 'bg-[#dfb642] text-[#192b14]'
+                  }`}>
+                    {missionsCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Item 4: Militares & Auditoria */}
               <button
                 onClick={() => {
                   onSelectAdminTab('technicians');
