@@ -121,7 +121,7 @@ export interface SystemAuditLog {
   targetRef?: string; // ex: "TICKET-1002" ou "DEODORO-NTB-014"
 }
 
-export type MissionPriority = 'urgente' | 'alta' | 'normal' | 'baixa';
+export type MissionPriority = 'critica' | 'alta' | 'normal' | 'baixa';
 export type MissionStatus = 'pendente' | 'em_andamento' | 'concluida' | 'cancelada';
 
 export interface MissionChecklistItem {
@@ -145,6 +145,7 @@ export interface Mission {
   description: string;
   priority: MissionPriority;
   status: MissionStatus;
+  location: string;
   assignedTechnicianIds: string[];
   createdBy: string;
   createdByRole: string;

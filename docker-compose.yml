@@ -19,15 +19,24 @@ services:
       DB_HOST: db-mysql
       DB_USER: deodoro_user
       DB_PASS: deodoro_pass123
+      DB_PASSWORD: deodoro_pass123
       DB_NAME: regimento_deodoro_helpdesk
     volumes:
       - ./data:/app/data
     networks:
       - rede_regimento
+    depends_on:
+      db-mysql:
+        condition: service_healthy
 
   # 2. Banco de Dados MySQL 8 (Opcional - se desejar servidor MySQL dedicado)
   db-mysql:
     image: mysql:8.0
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     container_name: 2gac_mysql_db
     restart: always
     environment:
@@ -43,7 +52,7 @@ services:
     networks:
       - rede_regimento
 
-  # 3. Servidor Web Apache / Reverse Proxy (Opcional para porta 80)
+  # 3. Servidor Web Apache / Reverse Proxy (Opcional para porta 80) // Desativado para utilização do docker e MYSQL local
 #  web-apache:
 #    image: httpd:2.4-alpine
 #    container_name: 2gac_apache_proxy
