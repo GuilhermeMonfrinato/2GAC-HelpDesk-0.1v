@@ -16,15 +16,10 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - DB_TYPE=sqlite
-      - DB_FILE=/app/data/database.sqlite
-      # Para utilizar com MySQL descomente abaixo:
-      # - DB_HOST=db-mysql
-      # - DB_USER=deodoro_user
-      # - DB_PASS=deodoro_pass123
-      # - DB_NAME=regimento_deodoro_helpdesk
+      DB_HOST: db-mysql
+      DB_USER: deodoro_user
+      DB_PASS: deodoro_pass123
+      DB_NAME: regimento_deodoro_helpdesk
     volumes:
       - ./data:/app/data
     networks:
@@ -49,18 +44,18 @@ services:
       - rede_regimento
 
   # 3. Servidor Web Apache / Reverse Proxy (Opcional para porta 80)
-  web-apache:
-    image: httpd:2.4-alpine
-    container_name: 2gac_apache_proxy
-    restart: always
-    ports:
-      - "80:80"
-    volumes:
-      - ./apache-proxy.conf:/usr/local/apache2/conf/httpd.conf:ro
-    depends_on:
-      - helpdesk-app
-    networks:
-      - rede_regimento
+#  web-apache:
+#    image: httpd:2.4-alpine
+#    container_name: 2gac_apache_proxy
+#    restart: always
+#    ports:
+#      - "80:80"
+#    volumes:
+#      - ./apache-proxy.conf:/usr/local/apache2/conf/httpd.conf:ro
+#    depends_on:
+#      - helpdesk-app
+#    networks:
+#      - rede_regimento
 
 networks:
   rede_regimento:
